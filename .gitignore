@@ -1,0 +1,29 @@
+# CMake build directories
+/build/
+/cmake-build-debug/
+/cmake-build-release/
+/cmake-build-*/
+
+# CLion
+.idea/
+
+# macOS junk
+.DS_Store
+
+# Windows junk
+Thumbs.db
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.obj
+*.o
+
+# Cache
+CMakeCache.txt
+CMakeFiles/
+
+# Logs
+*.log
