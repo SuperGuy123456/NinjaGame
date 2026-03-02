@@ -11,7 +11,20 @@
 using namespace std;
 
 int main() {
-    InitWindow(1920,1080, "Ninja Game");
+    InitWindow(800, 600, "Ninja Game");
+
+    // Get the current monitor's dimensions
+    int monitor = GetCurrentMonitor();
+    int screenWidth = GetMonitorWidth(monitor);
+    int screenHeight = GetMonitorHeight(monitor);
+
+    // Use 95% of screen size to avoid fullscreen but fill most of the display
+    int windowWidth = (int)(screenWidth);
+    int windowHeight = (int)(screenHeight);
+
+    // Resize to proper dimensions
+    SetWindowSize(windowWidth, windowHeight);
+    SetWindowPosition((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2); // Center the window
 
     DrawingPipeline pipeline;
     DrawLayer bglayer;

@@ -20,6 +20,10 @@ add_executable(NinjaGame
         main.cpp
         BaseClasses/Base.h
         Player.cpp
-        Player.h)
+        Player.h
+        main.cpp
+        main.cpp
+        main.cpp
+        main.cpp)
 
 target_link_libraries(NinjaGame raylib)
