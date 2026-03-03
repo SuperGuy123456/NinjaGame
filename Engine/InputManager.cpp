@@ -6,24 +6,33 @@ InputManager::InputManager(EventManager& _eventmanager) : eventmanager(_eventman
 }
 InputManager::~InputManager() {};
 
-void InputManager::GetInput() //Call every frame to check for input and broadcast events
+void InputManager::GetInput()
 {
-	//Check hold keys
-	for (int i = 0; i < 5; i++)
+	// HOLD
+	for (int i = 0; i < NUMBEROFHOLDKEYS; i++)
 	{
 		if (IsKeyDown(holdkeys[i]))
 		{
 			eventmanager.BroadcastMessage("HOLD_" + holdkeysreadable[i]);
-			//cout << "HOLD_" + holdkeysreadable[i] << endl;
 		}
 	}
-	//Check press keys
-	for (int i = 0; i < 6; i++)
+
+	// PRESS
+	for (int i = 0; i < NUMBEROFPRESSKEYS; i++)
 	{
 		if (IsKeyPressed(presskeys[i]))
 		{
 			eventmanager.BroadcastMessage("PRESS_" + presskeysreadable[i]);
-			//cout << "PRESS_" + presskeysreadable[i] << endl;
+		}
+	}
+
+	// RELEASE
+	for (int i = 0; i < NUMBEROFRELEASEKEYS; i++)
+	{
+		if (IsKeyReleased(releasekeys[i]))
+		{
+			eventmanager.BroadcastMessage("RELEASE_" + releasekeysreadable[i]);
 		}
 	}
 }
+

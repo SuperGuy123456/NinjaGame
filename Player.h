@@ -35,11 +35,11 @@ enum AnimState {
 class Player : public Load, public Listener
 {
 public:
-    Player(Vector2 pos, DrawLayer& _entitylayer);
+    Player(Vector2 pos, DrawLayer& _entitylayer, EventManager& _keyboardmanager);
     ~Player();
 
     void Draw() override;
-    void Update();
+    void Update(double& dt);
 
     void OnEvent(string &command) override;
     void OnSpecialEvent(string &command, vector<string> params) override;
@@ -47,8 +47,27 @@ public:
 private:
     void Animate();
 
+    const int WALKSPEED = 200;
+    const int READYSPEED = 180;
+
+    const int RUNSPEED = 400;
+    const int READYRUNSPEED = 380;
+
     DrawLayer& entitylayer;
     Vector2 pos;
+    int facing = 1;
+    int xchange = 0; //-1 for left, 0 for nothing, 1 for right
+    bool ychange = false; //for later?
+    bool isrunning = false ; //this modifies the animation from walk to run and also makes the xchange MORE
+    bool justjumped = false; //tells the update the exact frame the jump event fires
+    bool grounded; //tells the input to not send anymore jump updates unless the player is grounded
+    bool ready = false;;
+    bool wasready = false;
+    bool playingTransition = false;
+    bool playingReverseTransition = false;
+
+
+    EventManager& keyboardmanager;
 
     int canim = 0; //this means idle btw
     int cindex = 0;

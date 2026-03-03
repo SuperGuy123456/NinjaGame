@@ -29,6 +29,7 @@ int main() {
     SetWindowPosition((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2); // Center the window
     SetTargetFPS(60);
 
+    //drawing pipeline stuff
     DrawingPipeline pipeline;
     DrawLayer bglayer;
     DrawLayer tilelayer;
@@ -42,15 +43,27 @@ int main() {
     pipeline.AddLayer(&misclayer, "MISC LAYER");
     pipeline.AddLayer(&uilayer, "UI LAYER");
 
-    Player player(Vector2{100,100}, entitylayer);
+    EventManager keyboardmanager; //where all keyboard events will be broadcasted
+    InputManager inputmanager(keyboardmanager);
+
+    //init player
+    Player player(Vector2{100,100}, entitylayer, keyboardmanager);
+
+    SetTargetFPS(60);
 
     while (!WindowShouldClose()) {
+        double dt = GetFrameTime();   // central delta-time
+
         BeginDrawing();
         ClearBackground(Color{135, 206, 235});
+
+        inputmanager.GetInput();
+        player.Update(dt);            // pass dt into player
         pipeline.DrawAll();
-        player.Update();
+
         EndDrawing();
     }
+
 
     CloseWindow();
     return 0;

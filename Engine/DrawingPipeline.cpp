@@ -39,16 +39,13 @@ void DrawingPipeline::RemoveLayer(const std::string& id)
 
 void DrawingPipeline::DrawAll()
 {
-    TraceLog(LOG_INFO, "DrawingPipeline::DrawAll - Total layers: %d", layers.size());
     for (auto& layerpair : layers)
     {
         DrawLayer* layer = layerpair.second;
-        TraceLog(LOG_INFO, "Layer '%s' - Total priority groups: %d", layerpair.first.c_str(), layer->drawcalls.size());
 
         // iterate priorities in ascending order
         for (auto& [priority, loads] : layer->drawcalls)
         {
-            TraceLog(LOG_INFO, "  Priority %d - Objects: %d", priority, loads.size());
             for (Load* drawcall : loads)
             {
                 drawcall->Draw();
