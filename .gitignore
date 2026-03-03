@@ -27,3 +27,7 @@ CMakeFiles/
 
 # Logs
 *.log
+
+# Machine specific stuff i guess
+
+screenres.h

@@ -1,4 +1,8 @@
 //
+// Created by Manomay Tyagi on 3/2/26.
+//
+
+//
 // Created by tyagi on 3/1/2026.
 //
 
@@ -7,13 +11,11 @@
 #include "Engine/DrawingPipeline.h"
 #include "raylib.h"
 #include "Player.h"
-#include "screenres.h"
 
 using namespace std;
 
 int main() {
-    // Initialize with a small window first to query monitor size
-    InitWindow(SCREENWIDTH ,SCREENHEIGHT, "Ninja Game");
+    InitWindow(800, 600, "Ninja Game");
 
     // Get the current monitor's dimensions
     int monitor = GetCurrentMonitor();
@@ -25,9 +27,8 @@ int main() {
     int windowHeight = (int)(screenHeight);
 
     // Resize to proper dimensions
-    //SetWindowSize(windowWidth, windowHeight);
+    SetWindowSize(windowWidth, windowHeight);
     SetWindowPosition((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2); // Center the window
-    SetTargetFPS(60);
 
     DrawingPipeline pipeline;
     DrawLayer bglayer;
@@ -46,9 +47,12 @@ int main() {
 
     while (!WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(Color{135, 206, 235});
+        ClearBackground(BLACK);
+
+        // Test: draw a white rectangle to verify drawing works
+        DrawRectangle(100, 100, 400, 400, WHITE);
+
         pipeline.DrawAll();
-        player.Update();
         EndDrawing();
     }
 

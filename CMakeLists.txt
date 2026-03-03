@@ -17,13 +17,10 @@ add_executable(NinjaGame
         Engine/InputManager.cpp
         Engine/InputManager.h
         main.cpp
-        main.cpp
         BaseClasses/Base.h
         Player.cpp
         Player.h
-        main.cpp
-        main.cpp
-        main.cpp
-        main.cpp)
+        Engine/Spritesplitter.cpp
+        screenres.h)
 
 target_link_libraries(NinjaGame raylib)
