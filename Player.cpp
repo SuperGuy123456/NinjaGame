@@ -78,6 +78,7 @@ Player::Player(Vector2 pos,
     run.frames = Slice(index, 6);
     run.timePerFrame = 0.1f;
     run.loop = true;
+    run.blockStates = false;
     animator.AddAnimationState("RUN", run);
     index += 6;
 
