@@ -33,3 +33,50 @@ vector<Texture2D> SpriteSplitter::SplitByHorizontal(const char* path, float slic
     UnloadImage(unsplitimage); // Free CPU memory
     return splittedtxs;
 }
+
+std::vector<Texture2D> SpriteSplitter::SplitGrid(
+    const std::string& path,
+    int cellWidth,
+    int cellHeight,
+    int rows,
+    int cols,
+    float scale
+) {
+    std::vector<Texture2D> out;
+    out.reserve(rows * cols);
+
+    // Load the full sheet
+    Image sheetImg = LoadImage(path.c_str());
+
+    for (int y = 0; y < rows; y++) {
+        for (int x = 0; x < cols; x++) {
+
+            Rectangle src = {
+                (float)(x * cellWidth),
+                (float)(y * cellHeight),
+                (float)cellWidth,
+                (float)cellHeight
+            };
+
+            // Extract the frame
+            Image frame = ImageFromImage(sheetImg, src);
+
+            // Scale using nearest-neighbor
+            if (scale != 1.0f) {
+                int newW = (int)(cellWidth * scale);
+                int newH = (int)(cellHeight * scale);
+                ImageResizeNN(&frame, newW, newH);
+            }
+
+            // Convert to texture
+            Texture2D tex = LoadTextureFromImage(frame);
+            SetTextureFilter(tex, TEXTURE_FILTER_POINT); // <-- CRITICAL
+            out.push_back(tex);
+
+            UnloadImage(frame);
+        }
+    }
+
+    UnloadImage(sheetImg);
+    return out;
+}

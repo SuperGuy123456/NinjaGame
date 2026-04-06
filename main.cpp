@@ -8,28 +8,31 @@
 #include "raylib.h"
 #include "Player.h"
 #include "screenres.h"
+#include "Engine/Chunks.h"
 
 using namespace std;
-
+//ENTIRE GAME RUNS ON PIXEL ART WITH SCALE OF 10
 int main() {
-    // Initialize with a small window first to query monitor size
+
+
+    std::cout << "[BOOT] InitWindow...\n";
     InitWindow(SCREENWIDTH ,SCREENHEIGHT, "Ninja Game");
 
-    // Get the current monitor's dimensions
     int monitor = GetCurrentMonitor();
     int screenWidth = GetMonitorWidth(monitor);
     int screenHeight = GetMonitorHeight(monitor);
 
-    // Use 95% of screen size to avoid fullscreen but fill most of the display
     int windowWidth = (int)(screenWidth);
     int windowHeight = (int)(screenHeight);
 
-    // Resize to proper dimensions
-    //SetWindowSize(windowWidth, windowHeight);
-    SetWindowPosition((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2); // Center the window
+    std::cout << "[BOOT] SetWindowPosition...\n";
+    SetWindowPosition((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2);
+
+    std::cout << "[BOOT] SetTargetFPS...\n";
     SetTargetFPS(60);
 
-    //drawing pipeline stuff
+    // ---------------- Drawing Pipeline ----------------
+    std::cout << "[BOOT] Creating drawing pipeline...\n";
     DrawingPipeline pipeline;
     DrawLayer bglayer;
     DrawLayer tilelayer;
@@ -37,34 +40,58 @@ int main() {
     DrawLayer misclayer;
     DrawLayer uilayer;
 
+    std::cout << "[BOOT] Adding layers...\n";
     pipeline.AddLayer(&bglayer, "BACKGROUND LAYER");
     pipeline.AddLayer(&tilelayer, "TILE LAYER");
     pipeline.AddLayer(&entitylayer, "ENTITY LAYER");
     pipeline.AddLayer(&misclayer, "MISC LAYER");
     pipeline.AddLayer(&uilayer, "UI LAYER");
 
-    EventManager keyboardmanager; //where all keyboard events will be broadcasted
+    // ---------------- Event Managers ----------------
+    std::cout << "[BOOT] Creating event managers...\n";
+    EventManager keyboardmanager;
+    EventManager playerposmanager;
     InputManager inputmanager(keyboardmanager);
 
-    //init player
-    Player player(Vector2{100,100}, entitylayer, keyboardmanager);
+    // ---------------- Player ----------------
+    std::cout << "[BOOT] Creating player...\n";
+    Player player(Vector2{100,100}, entitylayer, keyboardmanager, playerposmanager);
 
-    SetTargetFPS(60);
+    std::cout << "[BOOT] Creating ChunkManager...\n";
+    ChunkManager chunkmanager(bglayer, playerposmanager);
 
+    std::cout << "[BOOT] ChunkManager constructed successfully.\n";
+
+    // ---------------- Camera ----------------
+    std::cout << "[BOOT] Setting up camera...\n";
+    Camera2D camera = { 0 };
+    camera.target = Vector2{ 100, 100 };
+    camera.offset = Vector2{ screenWidth / 2.0f, screenHeight / 2.0f };
+    camera.rotation = 0.0f;
+    camera.zoom = 0.1f;
+
+    std::cout << "[BOOT] Entering main loop...\n";
+
+    // ---------------- Main Loop ----------------
     while (!WindowShouldClose()) {
-        double dt = GetFrameTime();   // central delta-time
+        double dt = GetFrameTime();
+
+        camera.target = player.pos;
 
         BeginDrawing();
+        BeginMode2D(camera);
         ClearBackground(Color{135, 206, 235});
 
         inputmanager.GetInput();
-        player.Update(dt);            // pass dt into player
+        player.Update(dt);
+        chunkmanager.Update();
         pipeline.DrawAll();
 
+        EndMode2D();
         EndDrawing();
     }
 
-
+    std::cout << "[BOOT] Exiting cleanly.\n";
     CloseWindow();
     return 0;
 }

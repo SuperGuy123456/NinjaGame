@@ -4,13 +4,13 @@
 
 #include "Player.h"
 
-Player::Player(Vector2 pos, DrawLayer& _entitylayer,EventManager& _keyboardmanager) : entitylayer(_entitylayer), keyboardmanager(_keyboardmanager){
+Player::Player(Vector2 pos, DrawLayer& _entitylayer,EventManager& _keyboardmanager, EventManager& _playerposmanager) : entitylayer(_entitylayer), keyboardmanager(_keyboardmanager), playerposmanager(_playerposmanager) {
     this->pos = pos;
 
     entitylayer.AddDrawCall(this, 0);
 
     allframes = SpriteSplitter::SplitByHorizontal("../Art/Player/ninjaframes.png", 15, 10);
-    TraceLog(LOG_INFO, "Player: Loaded %d frames", allframes.size());
+
 
     allsequences.push_back(&idle);          // 0
     allsequences.push_back(&readyidle);     // 1
@@ -63,6 +63,14 @@ Player::~Player() {
 }
 
 void Player::Draw() {
+
+    //try to fix cindex before drawing
+    if (cindex > sizes[canim]-1) {
+        cindex = 0;
+    }
+
+
+
     Texture2D* tex = (*allsequences[canim])[cindex];
 
     // Source rectangle: full texture
@@ -90,6 +98,7 @@ void Player::Draw() {
 
 
 void Player::Update(double& dt) {
+
     Animate();
 
     // Detect ready toggles
@@ -148,6 +157,7 @@ void Player::Update(double& dt) {
         }
 
         pos.x += speed * xchange * dt;
+        playerposmanager.BroadcastSpecialMessage("PLAYER_POS_UPDATE " + to_string(pos.x) + " " + to_string(pos.y));
     }
 
 
@@ -241,7 +251,6 @@ void Player::OnEvent(string &command)
         return;
     }
     // Other events (non-input)
-    cout << "Other event: " << command << endl;
 }
 
 
@@ -265,6 +274,7 @@ void Player::Animate() {
     // Frame timing
     if (GetTime() - lasttime >= 0.2f) {
         lasttime = GetTime();
+
 
         // Forward transition
         if (playingTransition) {

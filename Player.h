@@ -35,7 +35,7 @@ enum AnimState {
 class Player : public Load, public Listener
 {
 public:
-    Player(Vector2 pos, DrawLayer& _entitylayer, EventManager& _keyboardmanager);
+    Player(Vector2 pos, DrawLayer& _entitylayer, EventManager& _keyboardmanager, EventManager& _playerposmanager);
     ~Player();
 
     void Draw() override;
@@ -43,6 +43,7 @@ public:
 
     void OnEvent(string &command) override;
     void OnSpecialEvent(string &command, vector<string> params) override;
+    Vector2 pos;
 
 private:
     void Animate();
@@ -54,7 +55,6 @@ private:
     const int READYRUNSPEED = 380;
 
     DrawLayer& entitylayer;
-    Vector2 pos;
     int facing = 1;
     int xchange = 0; //-1 for left, 0 for nothing, 1 for right
     bool ychange = false; //for later?
@@ -68,6 +68,7 @@ private:
 
 
     EventManager& keyboardmanager;
+    EventManager& playerposmanager;
 
     int canim = 0; //this means idle btw
     int cindex = 0;

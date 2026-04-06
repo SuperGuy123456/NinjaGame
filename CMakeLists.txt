@@ -21,6 +21,8 @@ add_executable(NinjaGame
         Player.cpp
         Player.h
         Engine/Spritesplitter.cpp
-        screenres.h)
+        screenres.h
+        Engine/Chunks.cpp
+        Engine/Chunks.h)
 
 target_link_libraries(NinjaGame raylib)
