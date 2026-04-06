@@ -14,7 +14,8 @@ public:
     std::map<int, std::vector<Load*>> drawcalls;
 
     // object → current priority
-    std::unordered_map<Load*, int> objectPriority;
+    std::map<Load*, int> objectPriority;
+
 
     void AddDrawCall(Load* load, int priority);
     void RemoveDrawCall(Load* load);

@@ -14,34 +14,64 @@ void Chunk::Update() {
 void Chunk::Draw() {
     int localY = 0;
 
-    for (const auto& row : texData) {
-        int localX = 0;
+    if (DEBUG_COLLISION) {
+        for (const auto& row : colData) {
+            int localX = 0;
 
-        for (int id : row) {
-            DrawTexture(
+            for (int id : row) {
+                if (id != 0) {
+                    DrawRectangle(
+                        x * TILESIZE * PIXELSCALE * TILESPERCHUNK + localX * TILESIZE * PIXELSCALE,
+                        y * TILESIZE * PIXELSCALE * TILESPERCHUNK + localY * TILESIZE * PIXELSCALE,
+                        TILESIZE * PIXELSCALE,
+                        TILESIZE * PIXELSCALE,
+                        Color{255, 255, 255, 80}
+                    );
+                }
+                localX++;
+            }
+            localY++;
+        }
+    }
+    else {
+        for (const auto& row : texData) {
+            int localX = 0;
+
+            for (int id : row) {
+
+                    DrawTexture(
                 tiletexs[id],
                 x * TILESIZE*PIXELSCALE*TILESPERCHUNK  + (localX * TILESIZE * PIXELSCALE),
                 y * TILESIZE*PIXELSCALE*TILESPERCHUNK + (localY * TILESIZE * PIXELSCALE),
                 WHITE
             );
 
-            localX++;
+                localX++;
+            }
+            localY++;
         }
-
-        localY++;
     }
+
     DrawRectangleLines(
-    x * TILESIZE * PIXELSCALE * TILESPERCHUNK,
-    y * TILESIZE * PIXELSCALE * TILESPERCHUNK,
-    TILESPERCHUNK * TILESIZE * PIXELSCALE,
-    TILESPERCHUNK * TILESIZE * PIXELSCALE,
-    RED
-);
+        x * TILESIZE * PIXELSCALE * TILESPERCHUNK,
+        y * TILESIZE * PIXELSCALE * TILESPERCHUNK,
+        TILESPERCHUNK * TILESIZE * PIXELSCALE,
+        TILESPERCHUNK * TILESIZE * PIXELSCALE,
+        RED
+    );
 }
 
 int Chunk::CheckTileCollision(const Vector2 &tilepos) const {
-    return colData[tilepos.x][tilepos.y];
+    int tx = (int)tilepos.x;
+    int ty = (int)tilepos.y;
+
+    if (ty < 0 || ty >= (int)colData.size()) return 0;
+    if (tx < 0 || tx >= (int)colData[ty].size()) return 0;
+
+    return colData[ty][tx]; // [row][col] = [y][x]
 }
+
+
 
 void Chunk::Shutdown() {
     //do stuff
@@ -254,3 +284,41 @@ void ChunkManager::ParseData() {
 
     std::cout << "ChunkManager: Level data loaded successfully.\n";
 }
+
+int ChunkManager::CheckTileCollision(const Vector2& worldPos)
+{
+    int tileX = (int)(worldPos.x / (TILESIZE * PIXELSCALE));
+    int tileY = (int)(worldPos.y / (TILESIZE * PIXELSCALE));
+
+    int cx = tileX / TILESPERCHUNK;
+    int cy = tileY / TILESPERCHUNK;
+
+    if (cx < 0 || cy < 0) return 0;
+    if (cx >= (int)coordchunks.size()) return 0;
+    if (cy >= (int)coordchunks[0].size()) return 0;
+
+    int localX = tileX % TILESPERCHUNK;
+    int localY = tileY % TILESPERCHUNK;
+
+    if (localX < 0) localX += TILESPERCHUNK;
+    if (localY < 0) localY += TILESPERCHUNK;
+
+    int result = coordchunks[cx][cy]->CheckTileCollision({(float)localX, (float)localY});
+
+    if (DEBUG_COLLISION) {
+        // draw the tile being sampled
+        float wx = (cx * TILESPERCHUNK + localX) * TILESIZE * PIXELSCALE;
+        float wy = (cy * TILESPERCHUNK + localY) * TILESIZE * PIXELSCALE;
+
+        DrawRectangleLines(
+            (int)wx,
+            (int)wy,
+            TILESIZE * PIXELSCALE,
+            TILESIZE * PIXELSCALE,
+            result ? RED : BLUE
+        );
+    }
+
+    return result;
+}
+

@@ -1,7 +1,3 @@
-//
-// Created by tyagi on 3/1/2026.
-//
-
 #ifndef NINJAGAME_PLAYER_H
 #define NINJAGAME_PLAYER_H
 
@@ -10,13 +6,14 @@
 #include "Engine/EventManager.h"
 #include "BaseClasses/Base.h"
 #include "Engine/Spritesplitter.h"
+#include "Engine/Chunks.h"
 
 using namespace std;
 
 enum AnimState {
     IDLE = 0,
     READYIDLE = 1,
-    IDLE_READY = 2,     // ← moved here
+    IDLE_READY = 2,
     WALK = 3,
     READYWALK = 4,
     RUN = 5,
@@ -31,11 +28,15 @@ enum AnimState {
     LAND_READY = 14
 };
 
-
 class Player : public Load, public Listener
 {
 public:
-    Player(Vector2 pos, DrawLayer& _entitylayer, EventManager& _keyboardmanager, EventManager& _playerposmanager);
+    Player(Vector2 pos,
+           DrawLayer& _entitylayer,
+           EventManager& _keyboardmanager,
+           EventManager& _playerposmanager,
+           ChunkManager* _chunkmanager);
+
     ~Player();
 
     void Draw() override;
@@ -43,97 +44,76 @@ public:
 
     void OnEvent(string &command) override;
     void OnSpecialEvent(string &command, vector<string> params) override;
-    Vector2 pos;
+
+    Vector2 pos; // FEET POSITION
 
 private:
     void Animate();
+    bool IsSolid(float wx, float wy);
 
-    const int WALKSPEED = 200;
-    const int READYSPEED = 180;
+    // Physics
+    Vector2 velocity = {0, 0};
+    float gravity = 2000.0f;
+    float maxFallSpeed = 2000.0f;
+    float jumpStrength = -700.0f;
 
-    const int RUNSPEED = 400;
-    const int READYRUNSPEED = 380;
+    // Hitbox (aligned to tiles)
+    float width = 20;
+    float height = 40;
 
-    DrawLayer& entitylayer;
+    // Movement state
     int facing = 1;
-    int xchange = 0; //-1 for left, 0 for nothing, 1 for right
-    bool ychange = false; //for later?
-    bool isrunning = false ; //this modifies the animation from walk to run and also makes the xchange MORE
-    bool justjumped = false; //tells the update the exact frame the jump event fires
-    bool grounded; //tells the input to not send anymore jump updates unless the player is grounded
-    bool ready = false;;
+    int xchange = 0;
+    bool isrunning = false;
+    bool grounded = true;
+    bool justjumped = false;
+
+    float animSpeed = 0.2f;       // default speed for normal animations
+    float transitionSpeed = 0.35f; // slower transitions
+
+    // Ready stance
+    bool ready = false;
     bool wasready = false;
     bool playingTransition = false;
     bool playingReverseTransition = false;
 
-
-    EventManager& keyboardmanager;
-    EventManager& playerposmanager;
-
-    int canim = 0; //this means idle btw
+    // Animation
+    int canim = 0;
     int cindex = 0;
-
     double lasttime = GetTime();
 
-    //magic nums for animations
     const int NUMBEROFSTATES = 15;
 
-    const int IDLESIZE = 4;
-    const int READYIDLESIZE = 2;
-    const int WALKSIZE = 6;
-    const int READYWALKSIZE = 6;
-    const int RUNSIZE = 6;
-    const int READYRUNSIZE = 6;
-    const int IDLE_READYSIZE = 6;
-    const int ATTACK1SIZE = 3;
-    const int ATTACK2SIZE = 4;
-    const int UPJUMPSIZE = 1;
-    const int FALLINGSIZE = 1;
-    const int READYUPJUMPSIZE = 1;
-    const int READYFALLINGSIZE = 1;
-    const int LAND_IDLESIZE = 2;
-    const int LAND_READYSIZE = 2;
-
     const int sizes[15] = {
-        IDLESIZE,
-        READYIDLESIZE,
-        IDLE_READYSIZE,   // moved here
-        WALKSIZE,
-        READYWALKSIZE,
-        RUNSIZE,
-        READYRUNSIZE,
-        ATTACK1SIZE,
-        ATTACK2SIZE,
-        UPJUMPSIZE,
-        FALLINGSIZE,
-        READYUPJUMPSIZE,
-        READYFALLINGSIZE,
-        LAND_IDLESIZE,
-        LAND_READYSIZE
+        4, 2, 6, 6, 6, 6, 6,
+        3, 4, 1, 1, 1, 1, 2, 2
     };
-
 
     vector<Texture2D> allframes;
 
-    vector<Texture2D*> idle;             // 0
-    vector<Texture2D*> readyidle;        // 1
-    vector<Texture2D*> walk;             // 2
-    vector<Texture2D*> readywalk;        // 3
-    vector<Texture2D*> run;              // 4
-    vector<Texture2D*> readyrun;         // 5
-    vector<Texture2D*> idle_ready;       // 6
-    vector<Texture2D*> attack1;          // 7
-    vector<Texture2D*> attack2;          // 8
-    vector<Texture2D*> upjump;           // 9
-    vector<Texture2D*> falling;          // 10
-    vector<Texture2D*> readyupjump;      // 11
-    vector<Texture2D*> readyfalling;     // 12
-    vector<Texture2D*> land_idle;        // 13
-    vector<Texture2D*> land_ready;       // 14
-
+    vector<Texture2D*> idle;
+    vector<Texture2D*> readyidle;
+    vector<Texture2D*> idle_ready;
+    vector<Texture2D*> walk;
+    vector<Texture2D*> readywalk;
+    vector<Texture2D*> run;
+    vector<Texture2D*> readyrun;
+    vector<Texture2D*> attack1;
+    vector<Texture2D*> attack2;
+    vector<Texture2D*> upjump;
+    vector<Texture2D*> falling;
+    vector<Texture2D*> readyupjump;
+    vector<Texture2D*> readyfalling;
+    vector<Texture2D*> land_idle;
+    vector<Texture2D*> land_ready;
 
     vector<vector<Texture2D*>*> allsequences;
+
+    // References
+    DrawLayer& entitylayer;
+    EventManager& keyboardmanager;
+    EventManager& playerposmanager;
+    ChunkManager* chunkmanager;
 };
 
-
-#endif //NINJAGAME_PLAYER_H
+#endif

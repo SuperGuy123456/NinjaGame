@@ -61,7 +61,7 @@ public:
     void Draw() override {};
     void Update(); // calls the chunk updates (only active ones)
 
-    int CheckTileCollision(const Vector2& tilepos) const; //tilepos is GLOBAL COORDS (finds chunk its in, then queries with chunk)
+    int CheckTileCollision(const Vector2& worldPos); //tilepos is GLOBAL COORDS (finds chunk its in, then queries with chunk)
 
     void OnEvent(string &command) override {}; //dont use this
     void OnSpecialEvent(string &command, vector<string> params) override; //need this for player pos updates

@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <sstream>
-
+#include "screenres.h"
 using namespace std;
 
 class EventManager //Allows Broadcast messages that can trigger functions

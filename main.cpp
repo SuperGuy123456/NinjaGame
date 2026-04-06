@@ -53,12 +53,12 @@ int main() {
     EventManager playerposmanager;
     InputManager inputmanager(keyboardmanager);
 
-    // ---------------- Player ----------------
-    std::cout << "[BOOT] Creating player...\n";
-    Player player(Vector2{100,100}, entitylayer, keyboardmanager, playerposmanager);
-
     std::cout << "[BOOT] Creating ChunkManager...\n";
     ChunkManager chunkmanager(bglayer, playerposmanager);
+    // ---------------- Player ----------------
+    std::cout << "[BOOT] Creating player...\n";
+    Player player(Vector2{100,100}, entitylayer, keyboardmanager, playerposmanager, &chunkmanager);
+
 
     std::cout << "[BOOT] ChunkManager constructed successfully.\n";
 
@@ -68,28 +68,45 @@ int main() {
     camera.target = Vector2{ 100, 100 };
     camera.offset = Vector2{ screenWidth / 2.0f, screenHeight / 2.0f };
     camera.rotation = 0.0f;
-    camera.zoom = 0.1f;
+    camera.zoom = 1.0f;
 
     std::cout << "[BOOT] Entering main loop...\n";
+
+    SetTargetFPS(60);
 
     // ---------------- Main Loop ----------------
     while (!WindowShouldClose()) {
         double dt = GetFrameTime();
 
-        camera.target = player.pos;
-
-        BeginDrawing();
-        BeginMode2D(camera);
-        ClearBackground(Color{135, 206, 235});
-
         inputmanager.GetInput();
         player.Update(dt);
         chunkmanager.Update();
+
+        // ---------------- Camera Update (AFTER player moves) ----------------
+        float lerp = 0.15f;
+        float targetX = camera.target.x + (player.pos.x - camera.target.x) * lerp;
+        float targetY = camera.target.y + (player.pos.y - camera.target.y) * lerp;
+
+        targetX = floor(targetX);
+        targetY = floor(targetY);
+
+        camera.target.x = targetX;
+        camera.target.y = targetY;
+
+        camera.offset.x = floor(camera.offset.x);
+        camera.offset.y = floor(camera.offset.y);
+
+        // ---------------- Drawing ----------------
+        BeginDrawing();
+        ClearBackground(Color{135, 206, 235});
+        DrawFPS(0,0);
+        BeginMode2D(camera);
         pipeline.DrawAll();
 
         EndMode2D();
         EndDrawing();
     }
+
 
     std::cout << "[BOOT] Exiting cleanly.\n";
     CloseWindow();

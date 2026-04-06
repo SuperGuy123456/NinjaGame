@@ -1,43 +1,32 @@
-//
-// Created by tyagi on 3/1/2026.
-//
-
 #include "Player.h"
 
-Player::Player(Vector2 pos, DrawLayer& _entitylayer,EventManager& _keyboardmanager, EventManager& _playerposmanager) : entitylayer(_entitylayer), keyboardmanager(_keyboardmanager), playerposmanager(_playerposmanager) {
-    this->pos = pos;
+Player::Player(Vector2 pos,
+               DrawLayer& _entitylayer,
+               EventManager& _keyboardmanager,
+               EventManager& _playerposmanager,
+               ChunkManager* _chunkmanager)
+    : entitylayer(_entitylayer),
+      keyboardmanager(_keyboardmanager),
+      playerposmanager(_playerposmanager),
+      chunkmanager(_chunkmanager)
+{
+    this->pos = pos; // FEET POSITION
 
     entitylayer.AddDrawCall(this, 0);
 
     allframes = SpriteSplitter::SplitByHorizontal("../Art/Player/ninjaframes.png", 15, 10);
 
-
-    allsequences.push_back(&idle);          // 0
-    allsequences.push_back(&readyidle);     // 1
-    allsequences.push_back(&idle_ready);    // 2  ← moved here
-    allsequences.push_back(&walk);          // 3
-    allsequences.push_back(&readywalk);     // 4
-    allsequences.push_back(&run);           // 5
-    allsequences.push_back(&readyrun);      // 6
-    allsequences.push_back(&attack1);       // 7
-    allsequences.push_back(&attack2);       // 8
-    allsequences.push_back(&upjump);        // 9
-    allsequences.push_back(&falling);       // 10
-    allsequences.push_back(&readyupjump);   // 11
-    allsequences.push_back(&readyfalling);  // 12
-    allsequences.push_back(&land_idle);     // 13
-    allsequences.push_back(&land_ready);    // 14
-
-
+    allsequences = {
+        &idle, &readyidle, &idle_ready, &walk, &readywalk,
+        &run, &readyrun, &attack1, &attack2, &upjump,
+        &falling, &readyupjump, &readyfalling, &land_idle, &land_ready
+    };
 
     int fullindex = 0;
+    for (int i = 0; i < NUMBEROFSTATES; ++i)
+        for (int j = 0; j < sizes[i]; ++j)
+            allsequences[i]->push_back(&allframes[fullindex++]);
 
-    for (int i = 0; i < NUMBEROFSTATES; ++i) {
-        for (int j = 0; j < sizes[i]; ++j) {
-            allsequences[i]->push_back(&allframes[fullindex]);
-            fullindex++;
-        }
-    }
     keyboardmanager.AddListener("PLAYER_W", this, "HOLD_W");
     keyboardmanager.AddListener("PLAYER_A", this, "HOLD_A");
     keyboardmanager.AddListener("PLAYER_S", this, "HOLD_S");
@@ -51,250 +40,212 @@ Player::Player(Vector2 pos, DrawLayer& _entitylayer,EventManager& _keyboardmanag
     keyboardmanager.AddListener("PLAYER_R_S", this, "RELEASE_S");
     keyboardmanager.AddListener("PLAYER_R_D", this, "RELEASE_D");
     keyboardmanager.AddListener("PLAYER_R_SHIFT", this, "RELEASE_SHIFT");
-
-    //temporary
-    grounded = true;
 }
 
 Player::~Player() {
-    for (const Texture2D& tex : allframes) {
+    for (const Texture2D& tex : allframes)
         UnloadTexture(tex);
-    }
 }
 
-void Player::Draw() {
-
-    //try to fix cindex before drawing
-    if (cindex > sizes[canim]-1) {
-        cindex = 0;
-    }
-
-
-
-    Texture2D* tex = (*allsequences[canim])[cindex];
-
-    // Source rectangle: full texture
-    Rectangle src = { 0.0f, 0.0f, facing * (float)tex->width, (float)tex->height };
-
-    float offset = 10.0f * facing; // push left when facing right, push right when facing left
-
-    Rectangle dest = {
-        pos.x + offset,
-        pos.y,
-        (float)tex->width,
-        (float)tex->height
-    };
-
-
-    // Origin: pivot point (center)
-    Vector2 origin = { tex->width / 2.0f, tex->height / 2.0f };
-
-    // Rotation: none
-    float rotation = 0.0f;
-
-    DrawTexturePro(*tex, src, dest, origin, rotation, WHITE);
+bool Player::IsSolid(float wx, float wy) {
+    return chunkmanager->CheckTileCollision({wx, wy}) != 0;
 }
-
-
 
 void Player::Update(double& dt) {
-
     Animate();
 
-    // Detect ready toggles
-    bool justBecameReady = (ready && !wasready);
-    bool justStoppedReady = (!ready && wasready);
+    // 1. Input Polling
+    xchange = 0;
+    if (IsKeyDown(KEY_A)) { xchange = -1; facing = -1; }
+    if (IsKeyDown(KEY_D)) { xchange = 1; facing = 1; }
 
-    // Forward transition: idle -> ready
-    if (justBecameReady) {
-        playingTransition = true;
-        playingReverseTransition = false;
-        canim = IDLE_READY;
-        cindex = 0; // start forward
+    // 2. Gravity
+    // Only apply gravity if we aren't already confirmed grounded from the previous frame
+    if (!grounded) {
+        velocity.y += gravity * dt;
+        if (velocity.y > maxFallSpeed) velocity.y = maxFallSpeed;
+    } else {
+        velocity.y = 0;
     }
 
-    // Reverse transition: ready -> idle
-    if (justStoppedReady) {
-        playingReverseTransition = true;
-        playingTransition = false;
-        canim = IDLE_READY;
-        cindex = sizes[IDLE_READY] - 1; // start from last frame
-    }
+    float currentSpeed = (isrunning ? 600.0f : 400.0f);
+    velocity.x = xchange * currentSpeed;
 
-    // If playing forward transition
-    if (playingTransition) {
-        if (cindex == sizes[IDLE_READY] - 1) {
-            playingTransition = false;
-            canim = READYIDLE;
-            cindex = 0;
+    const float TILE_SIZE = 8.0f;
+    const float EPS = 0.1f;
+
+    // 3. MOVE X
+    pos.x += velocity.x * dt;
+    if (velocity.x > 0) {
+        if (IsSolid(pos.x + width/2, pos.y - 2) || IsSolid(pos.x + width/2, pos.y - height + 2)) {
+            pos.x = floor((pos.x + width/2) / TILE_SIZE) * TILE_SIZE - width/2;
+            velocity.x = 0;
         }
-        wasready = ready;
-        return; // block movement animations
-    }
-
-    // If playing reverse transition
-    if (playingReverseTransition) {
-        if (cindex == 0) {
-            playingReverseTransition = false;
-            canim = IDLE;
-            cindex = 0;
+    } else if (velocity.x < 0) {
+        if (IsSolid(pos.x - width/2, pos.y - 2) || IsSolid(pos.x - width/2, pos.y - height + 2)) {
+            pos.x = ceil((pos.x - width/2) / TILE_SIZE) * TILE_SIZE + width/2;
+            velocity.x = 0;
         }
-        wasready = ready;
-        return; // block movement animations
     }
 
-    // Movement (only when not in transition)
-    if (!playingTransition && !playingReverseTransition) {
+    // 4. MOVE Y
+    pos.y += velocity.y * dt;
 
-        float speed = 0.0f;
+    // PRE-COLLISION CHECK: Assume we are in air unless floor is hit
+    bool wasGrounded = grounded;
+    grounded = false;
 
-        if (xchange != 0 && grounded && !justjumped) {
-            if (isrunning) {
-                speed = ready ? READYRUNSPEED : RUNSPEED;
-            } else {
-                speed = ready ? READYSPEED : WALKSPEED;
+    if (velocity.y >= 0) { // Falling or Stationary
+        // Check a tiny bit below the feet (pos.y + 1)
+        if (IsSolid(pos.x - width/2 + EPS, pos.y + EPS) || IsSolid(pos.x + width/2 - EPS, pos.y + EPS)) {
+            pos.y = floor(pos.y / TILE_SIZE) * TILE_SIZE;
+            velocity.y = 0;
+            grounded = true;
+        }
+    } else if (velocity.y < 0) { // Jumping
+        if (IsSolid(pos.x - width/2 + EPS, pos.y - height) || IsSolid(pos.x + width/2 - EPS, pos.y - height)) {
+            pos.y = ceil((pos.y - height) / TILE_SIZE) * TILE_SIZE + height;
+            velocity.y = 0;
+        }
+    }
+
+    // 5. Animation State Machine
+    // Now grounded is stable for the rest of this frame
+    if (!grounded) {
+        if (velocity.y < 0) canim = ready ? READYUPJUMP : UPJUMP;
+        else               canim = ready ? READYFALLING : FALLING;
+    }
+    else {
+        // Handle Landing
+        if (!wasGrounded) {
+             canim = ready ? LAND_READY : LAND_IDLE;
+        }
+        else if (xchange != 0) {
+            if (isrunning) canim = ready ? READYRUN : RUN;
+            else           canim = ready ? READYWALK : WALK;
+        }
+        else {
+            canim = ready ? READYIDLE : IDLE;
+        }
+    }
+
+    // 5. Broadcast Position (Send as floats for smooth camera, let the Draw call handle snapping)
+    playerposmanager.BroadcastSpecialMessage(
+        "PLAYER_POS_UPDATE " + to_string(pos.x) + " " + to_string(pos.y)
+    );
+
+    // --- ANIMATION STATE MACHINE ---
+    int nextAnim = canim;
+
+    // 1. AIRBORNE
+    if (!grounded) {
+        if (velocity.y < 0) nextAnim = ready ? READYUPJUMP : UPJUMP;
+        else               nextAnim = ready ? READYFALLING : FALLING;
+    }
+    // 2. GROUNDED
+    else {
+        // Check if we are currently in a "One-Shot" transition
+        bool isTransitioning = (canim == IDLE_READY || canim == LAND_IDLE || canim == LAND_READY);
+
+        // If we are transitioning, wait until the last frame to allow a switch
+        // UNLESS the player starts moving (interrupting the transition)
+        if (isTransitioning && cindex < sizes[canim] - 1 && xchange == 0 && !justjumped) {
+            nextAnim = canim; // Stay in current transition
+        }
+        else {
+            if (xchange != 0) {
+                if (isrunning) nextAnim = ready ? READYRUN : RUN;
+                else           nextAnim = ready ? READYWALK : WALK;
+            }
+            else {
+                // Handle the switch into Ready mode
+                if (ready && !wasready) {
+                    nextAnim = IDLE_READY;
+                }
+                // Handle the switch out of Ready mode (if you have a ready_to_idle anim)
+                else if (!ready && wasready) {
+                    // If you don't have a specific ready->idle anim, it will snap to IDLE
+                    nextAnim = IDLE;
+                }
+                else {
+                    nextAnim = ready ? READYIDLE : IDLE;
+                }
             }
         }
-
-        pos.x += speed * xchange * dt;
-        playerposmanager.BroadcastSpecialMessage("PLAYER_POS_UPDATE " + to_string(pos.x) + " " + to_string(pos.y));
     }
 
-
-    // Normal animation logic
-    if (xchange == -1) facing = -1;
-    if (xchange == 1)  facing = 1;
-
-    if (xchange == 0 && grounded && !justjumped) {
-        if (ready) canim = READYIDLE;
-        else       canim = IDLE;
+    // Final landing check (if we just hit the ground)
+    if (grounded && !wasGrounded) {
+        nextAnim = ready ? LAND_READY : LAND_IDLE;
     }
 
-    if (isrunning && xchange != 0 && grounded && !justjumped) {
-        if (ready) canim = READYRUN;
-        else       canim = RUN;
-    }
-    else if (xchange != 0 && grounded && !justjumped) {
-        if (ready) canim = READYWALK;
-        else       canim = WALK;
-    }
-
+    canim = nextAnim;
     wasready = ready;
 }
 
+void Player::Draw() {
+    if (cindex > sizes[canim] - 1)
+        cindex = 0;
 
+    Texture2D* tex = (*allsequences[canim])[cindex];
 
-void Player::OnEvent(string &command)
-{
-    // HOLD_ events
-    if (command.rfind("HOLD_", 0) == 0)
-    {
-        string key = command.substr(5); // remove "HOLD_
+    Rectangle src = {0, 0, facing * (float)tex->width, (float)tex->height};
+    Rectangle dest = {pos.x, pos.y+1, (float)tex->width, (float)tex->height};
+    Vector2 origin = {tex->width/2.0f, (float)tex->height};
 
-
-        if (key == "W") {
-            /* jump */
-            if (grounded) {
-                grounded = false;
-                justjumped = true;
-            }
-        }
-        if (key == "A") {
-            /* move left */
-            xchange = -1;
-        }
-        if (key == "D") {
-            /* move right */
-            xchange = 1;
-        }
-        if (key == "SHIFT") {
-            isrunning = true;
-        }
-
-        return;
-    }
-    // PRESS_ events
-    else if (command.rfind("PRESS_", 0) == 0)
-    {
-        string key = command.substr(6); // remove "PRESS_"
-
-        if (key == "E") {
-            if (ready) {
-                ready = false;
-            }
-            else {
-                ready = true;
-            }
-        }
-
-        return;
-    }
-    else if (command.rfind("RELEASE_", 0) == 0) {
-        string key = command.substr(8);
-
-        if (key == "W") {
-            /* jump */
-            //idk why i made this a hold key...
-        }
-        if (key == "A") {
-            /* move left */
-            xchange = 0;
-        }
-        if (key == "D") {
-            /* move right */
-            xchange = 0;
-        }
-        if (key == "SHIFT") {
-            isrunning = false;
-        }
-
-        return;
-    }
-    // Other events (non-input)
+    DrawTexturePro(*tex, src, dest, origin, 0, WHITE);
 }
 
+void Player::OnEvent(string &command) {
 
-void Player::OnSpecialEvent(string &command, vector<string> params) {
+    if (command == "HOLD_W") {
+        if (grounded) {
+            velocity.y = jumpStrength;
+            grounded = false;
+            justjumped = true;
+        }
+    }
+    if (command == "HOLD_A") xchange = -1;
+    if (command == "HOLD_D") xchange = 1;
+    if (command == "HOLD_SHIFT") isrunning = true;
 
+    if (command == "PRESS_E") ready = !ready;
+
+    if (command == "RELEASE_A" || command == "RELEASE_D")
+        xchange = 0;
+
+    if (command == "RELEASE_SHIFT")
+        isrunning = false;
 }
+
+void Player::OnSpecialEvent(string &command, vector<string> params) {}
 
 void Player::Animate() {
     static int lastAnim = -1;
 
-    // Reset frame index when animation changes
+    // Detect animation change
     if (canim != lastAnim) {
-        if (playingReverseTransition)
-            cindex = sizes[canim] - 1;
-        else
-            cindex = 0;
-
+        cindex = 0;
         lastAnim = canim;
+        lasttime = GetTime();
     }
 
-    // Frame timing
-    if (GetTime() - lasttime >= 0.2f) {
+    // Determine playback speed
+    float speed = animSpeed;
+
+    // Transition animations should be slower
+    if (canim == IDLE_READY ||
+        canim == LAND_IDLE ||
+        canim == LAND_READY)
+    {
+        speed = transitionSpeed;
+    }
+
+    // Advance frames
+    if (GetTime() - lasttime >= speed) {
         lasttime = GetTime();
-
-
-        // Forward transition
-        if (playingTransition) {
-            cindex++;
-            return;
-        }
-
-        // Reverse transition
-        if (playingReverseTransition) {
-            cindex--;
-            return;
-        }
-
-        // Normal animation
         cindex++;
-        if (cindex >= sizes[canim]) {
+        if (cindex >= sizes[canim])
             cindex = 0;
-        }
     }
 }
-
-
-
