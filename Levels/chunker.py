@@ -4,8 +4,8 @@ CHUNK_SIZE = 10   # tiles per chunk (20x20)
 
 # Collision groups use EDITOR indices (0-based)
 COLLISION_GROUPS = {
-    "passable": [-1],
-    "rigid":    [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],
+    "passable": [-1, 6],
+    "rigid":    [0,1,2,3,4,5,7,8,9,10,11,12,13,14],
     "danger":   [],
     "special":  [],
 }

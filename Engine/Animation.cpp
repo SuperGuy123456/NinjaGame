@@ -39,36 +39,23 @@ void Animator::ChangeAnimationState(const string &name) {
 
 void Animator::Animate(float deltaTime) {
     if (!activeAnim) {
-        cout << "[ANIMATOR] No active animation.\n";
         return;
     }
 
-    // Debug header
-    cout << "\n=== ANIMATOR DEBUG ===\n";
-    cout << "Animation: " << currentAnimation << "\n";
-    cout << "deltaTime: " << deltaTime << "\n";
+
 
     // Advance timer
     timer += deltaTime;
 
-    cout << "Timer: " << timer
-         << " / timePerFrame: " << activeAnim->timePerFrame << "\n";
+
 
     // Frame info
     int frameCount = activeAnim->frames.size();
-    cout << "Current Frame: " << currentFrame
-         << " / FrameCount: " << frameCount << "\n";
 
-    cout << "reverse: " << activeAnim->reverse
-         << " | loop: " << activeAnim->loop
-         << " | loopCount: " << activeAnim->loopCount
-         << " | loopsRemaining: " << loopsRemaining
-         << " | blockStates: " << activeAnim->blockStates
-         << "\n";
 
     // If enough time has passed, move to next frame
     if (timer >= activeAnim->timePerFrame) {
-        cout << ">>> ADVANCING FRAME\n";
+
 
         timer -= activeAnim->timePerFrame;
 
@@ -109,11 +96,10 @@ void Animator::Animate(float deltaTime) {
         }
     }
     else {
-        cout << ">>> NOT advancing frame this tick\n";
+
     }
 
-    cout << "Final Frame: " << currentFrame << "\n";
-    cout << "=======================\n";
+
 
     // Only unblock if we actually ADVANCED into the last frame
     if (!activeAnim->loop &&

@@ -12,6 +12,7 @@
 #include <vector>       // std::vector
 #include <iostream>     // std::cout
 #include <cstdlib>      // stoi
+#include "Engine/Collision.h"
 
 //in order to support variable map sizes (although the maps must be divisible CLEANLY into chunks) i must use vectors
 
@@ -24,7 +25,7 @@ using namespace std;
 
 #define TILESPERCHUNK 10
 
-class Chunk : public Load {
+class Chunk : public Load, public HasCollider {
 public:
     Chunk(int cx, int cy,
                 const vector<vector<int>>& tex,

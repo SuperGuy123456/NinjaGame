@@ -8,10 +8,12 @@
 #include "Engine/Spritesplitter.h"
 #include "Engine/Chunks.h"
 #include "Engine/Animation.h"
+#include "Engine/Collision.h"
+#include "screenres.h"
 
 using namespace std;
 
-class Player : public Load, public Listener
+class Player : public Load, public Listener, public HasCollider
 {
 public:
     Player(Vector2 pos,
@@ -32,6 +34,7 @@ public:
 
 private:
     bool IsSolid(float wx, float wy);
+    void ResolveCollisions(double dt);
 
     vector<Texture2D> allframes;
 

@@ -3,6 +3,28 @@
 Chunk::Chunk(int cx, int cy, const vector<vector<int> > &tex, const vector<vector<int> > &col, const vector<Texture2D>& _tiletexs, DrawLayer& _bglayer) : texData(tex), colData(col), tiletexs(_tiletexs), bglayer(_bglayer) {
     x = cx;
     y = cy;
+
+    //make all of the boxes (one time thing)
+    int localY = 0;
+    for (const auto& row : colData) {
+        int localX = 0;
+
+        for (int id : row) {
+            if (id != 0) {
+                AddHitbox(
+                    Rectangle{
+                    (float)x * TILESIZE * PIXELSCALE * TILESPERCHUNK + localX * TILESIZE * PIXELSCALE,
+                    (float)y * TILESIZE * PIXELSCALE * TILESPERCHUNK + localY * TILESIZE * PIXELSCALE,TILESIZE * PIXELSCALE, TILESIZE * PIXELSCALE},
+                "TILE AT: " + to_string(x) + "," + to_string(y),
+                RIDGIDBOX
+                );
+
+            }
+            localX++;
+        }
+        localY++;
+    }
+
 }
 
 Chunk::~Chunk(){}; //no need to unload textures as they are part of chunkmanager
@@ -77,11 +99,13 @@ void Chunk::Shutdown() {
     //do stuff
     bglayer.RemoveDrawCall(this);
     cout<<"[CHUNK] Shutting down...\n";
+    Collision::RemoveCollider(this); //remove from list
 }
 
 void Chunk::Startup() {
     //do stuff
     bglayer.AddDrawCall(this, 0);
+    Collision::AddCollider(this); //add to list
 }
 
 //-----CHUNKMANAGER STUFF-----

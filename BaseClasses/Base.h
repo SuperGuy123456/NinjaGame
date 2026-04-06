@@ -17,7 +17,8 @@ struct Node {
 enum HitboxType {
 	ATTACKBOX,
 	HURTBOX,
-	TRIGGERBOX
+	TRIGGERBOX,
+	RIDGIDBOX
 };
 
 struct Hitbox {
