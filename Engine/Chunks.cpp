@@ -52,13 +52,13 @@ void Chunk::Draw() {
         }
     }
 
-    DrawRectangleLines(
+    /*DrawRectangleLines(
         x * TILESIZE * PIXELSCALE * TILESPERCHUNK,
         y * TILESIZE * PIXELSCALE * TILESPERCHUNK,
         TILESPERCHUNK * TILESIZE * PIXELSCALE,
         TILESPERCHUNK * TILESIZE * PIXELSCALE,
         RED
-    );
+    );*/
 }
 
 int Chunk::CheckTileCollision(const Vector2 &tilepos) const {
@@ -133,7 +133,6 @@ void ChunkManager::OnSpecialEvent(string &command, vector<string> params) {
     int cx = playerx / CHUNK_SIZE;
     int cy = playery / CHUNK_SIZE;
 
-    std::cout << "Player chunk: cx=" << cx << " cy=" << cy << "\n";
 
 
     prevactivechunkobjs = activechunkobjs;
@@ -174,7 +173,7 @@ void ChunkManager::OnSpecialEvent(string &command, vector<string> params) {
         }
     }
 
-    cout<<"LENGTH OF ACTIVE CHUNKS: "<<activechunkobjs.size()<<endl;
+
 
 }
 

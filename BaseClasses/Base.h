@@ -14,7 +14,27 @@ struct Node {
 	float fCost() const { return gCost + hCost; }
 };
 
-class HasCollider {};
+enum HitboxType {
+	ATTACKBOX,
+	HURTBOX,
+	TRIGGERBOX
+};
+
+struct Hitbox {
+	Rectangle rect;
+	string name;
+	HitboxType type;
+};
+
+class HasCollider {
+public:
+	vector<Hitbox> hitboxes;
+	string tag; //when collsion is returned, passes: [OBJECT TAG][HITBOXNAME][HITBOX TYPE][RECT REFERENCE (to the hitbox for position and size stuff)]
+
+	void AddHitbox(Rectangle r, const string& name, HitboxType type) {
+		hitboxes.push_back({r, name, type});
+	}
+};
 class Load
 {
 public:
