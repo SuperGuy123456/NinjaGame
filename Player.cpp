@@ -8,25 +8,23 @@ Player::Player(Vector2 pos,
     : entitylayer(_entitylayer),
       keyboardmanager(_keyboardmanager),
       playerposmanager(_playerposmanager),
-      chunkmanager(_chunkmanager)
+      chunkmanager(_chunkmanager),
+      animator(&allframes)   // ✅ IMPORTANT: hook animator to frame storage
 {
     this->pos = pos;
-    entitylayer.AddDrawCall(this, 0);
+    entitylayer.AddDrawCall(this, 10000);
 
     // -----------------------------
     // LOAD ALL FRAMES
     // -----------------------------
     allframes = SpriteSplitter::SplitByHorizontal("../Art/Player/ninjaframes.png", 15, 10);
 
-    vector<Texture2D*> ptrs;
-    ptrs.reserve(allframes.size());
-    for (auto& f : allframes) ptrs.push_back(&f);
-
+    // Helper: return a vector of frame indices instead of pointers
     auto Slice = [&](int start, int count) {
-        vector<Texture2D*> out;
+        std::vector<int> out;
         out.reserve(count);
         for (int i = 0; i < count; i++)
-            out.push_back(ptrs[start + i]);
+            out.push_back(start + i);
         return out;
     };
 
@@ -135,6 +133,9 @@ Player::Player(Vector2 pos,
 
     animator.ChangeAnimationState("IDLE");
 
+    // -----------------------------
+    // INPUT LISTENERS
+    // -----------------------------
     keyboardmanager.AddListener("PLAYER_W", this, "HOLD_W");
     keyboardmanager.AddListener("PLAYER_A", this, "HOLD_A");
     keyboardmanager.AddListener("PLAYER_S", this, "HOLD_S");
@@ -148,11 +149,22 @@ Player::Player(Vector2 pos,
     keyboardmanager.AddListener("PLAYER_R_D", this, "RELEASE_D");
     keyboardmanager.AddListener("PLAYER_R_SHIFT", this, "RELEASE_SHIFT");
 
-    Rectangle body = { pos.x - width / 2.0f, pos.y - height, width, height };
+    keyboardmanager.AddListener("PRESS_LEFT CLICK", this, "PRESS_LEFT CLICK");
+    keyboardmanager.AddListener("RELEASE_LEFT CLICK", this, "RELEASE_LEFT_CLICK");
+
+    // -----------------------------
+    // COLLISION BOXES
+    // -----------------------------
+    Rectangle legs = { pos.x - ridgidbox_width / 2.0f, pos.y - ridgidbox_height, ridgidbox_width, ridgidbox_height };
     this->tag = "PLAYER";
-    this->AddHitbox(body, "LEGS", RIDGIDBOX);
+    this->AddHitbox(legs, "LEGS", RIDGIDBOX);
+
+    Rectangle attackbox = { pos.x - ridgidbox_width, pos.y - ridgidbox_height, ridgidbox_width, ridgidbox_height };
+    this->AddHitbox(attackbox, "PLAYER_ATTACKBOX", ATTACKBOX);
+
     Collision::AddCollider(this);
 }
+
 
 Player::~Player() {
     Collision::RemoveCollider(this);
@@ -166,7 +178,9 @@ bool Player::IsSolid(float wx, float wy) {
 void Player::Update(double& dt) {
     bool wasGrounded = grounded;
 
-    // 1. INPUT
+    // ---------------------------------------------------------
+    // 1. MOVEMENT INPUT
+    // ---------------------------------------------------------
     xchange = 0;
     if (IsKeyDown(KEY_A)) { xchange = -1; facing = -1; }
     if (IsKeyDown(KEY_D)) { xchange = 1; facing = 1; }
@@ -174,100 +188,150 @@ void Player::Update(double& dt) {
     float currentSpeed = (isrunning ? 1000.0f : 600.0f);
     velocity.x = xchange * currentSpeed;
 
-    // 2. GRAVITY (Only apply if not grounded)
+    // ---------------------------------------------------------
+    // 2. PHYSICS & GRAVITY
+    // ---------------------------------------------------------
     if (!grounded) {
         velocity.y += gravity * dt;
         if (velocity.y > maxFallSpeed) velocity.y = maxFallSpeed;
     } else {
-        // Small constant force to keep grounded check stable
-        velocity.y = 10.0f;
+        velocity.y = 10.0f; // Stick to ground
     }
 
-    // 3. PHYSICS
     ResolveCollisions(dt);
 
-    // 4. ANIMATION LOGIC
-    // We check animator.GetCurrentState() inside the logic if needed,
-    // but focusing on fixing the state transitions here.
-    if (!grounded) {
-        if (velocity.y < 0)
-            animator.ChangeAnimationState(ready ? "READYUPJUMP" : "UPJUMP");
-        else
-            animator.ChangeAnimationState(ready ? "READYFALLING" : "FALLING");
+    // ---------------------------------------------------------
+    // 3. COMBAT SYSTEM (ATTACK1 → ATTACK2 BUFFERING)
+    // ---------------------------------------------------------
+    if (isAttacking) {
+
+        if (animator.IsAnimationFinished()) {
+            if (currentAttack == 1 && bufferedAttack) {
+                std::cout << "[COMBAT] Attack1 ENDED → Attack2 STARTING (buffered)" << std::endl;
+
+                bufferedAttack = false;
+                currentAttack = 2;
+
+                // --- THE FIX ---
+
+                animator.ChangeAnimationState("ATTACK2");
+                playerposmanager.BroadcastMessage("ATTACKED");
+                // ---------------
+            }
+            else {
+                isAttacking = false;
+                currentAttack = 0;
+
+            }
+        }
     }
-    else {
-        if (!wasGrounded) {
-            animator.ChangeAnimationState(ready ? "LAND_READY" : "LAND_IDLE");
-        }
-        else if (xchange != 0) {
-            if (isrunning)
-                animator.ChangeAnimationState(ready ? "READYRUN" : "RUN");
+
+
+
+    // ---------------------------------------------------------
+    // 3. ANIMATION STATE MACHINE (CLEAN)
+    // ---------------------------------------------------------
+    if (!isAttacking) {
+        // Check Airborne States
+        if (!grounded) {
+            if (velocity.y < 0)
+                animator.ChangeAnimationState(ready ? "READYUPJUMP" : "UPJUMP");
             else
-                animator.ChangeAnimationState(ready ? "READYWALK" : "WALK");
+                animator.ChangeAnimationState(ready ? "READYFALLING" : "FALLING");
         }
+        // Check Grounded States
         else {
-            if (ready && !wasready)
-                animator.ChangeAnimationState("IDLE_READY");
-            else if (!ready && wasready)
-                animator.ChangeAnimationState("READY_IDLE");
-            else
-                animator.ChangeAnimationState(ready ? "READYIDLE" : "IDLE");
+            // Just landed
+            if (!wasGrounded) {
+                animator.ChangeAnimationState(ready ? "LAND_READY" : "LAND_IDLE");
+            }
+            // Moving
+            else if (xchange != 0) {
+                if (isrunning)
+                    animator.ChangeAnimationState(ready ? "READYRUN" : "RUN");
+                else
+                    animator.ChangeAnimationState(ready ? "READYWALK" : "WALK");
+            }
+            // Standing Still
+            else {
+                // Handle Transitions between Idle and Ready
+                if (ready && !wasready)
+                    animator.ChangeAnimationState("IDLE_READY");
+                else if (!ready && wasready)
+                    animator.ChangeAnimationState("READY_IDLE");
+                else
+                    animator.ChangeAnimationState(ready ? "READYIDLE" : "IDLE");
+            }
         }
+
+        wasready = ready;
     }
 
-    wasready = ready;
 
+    // ---------------------------------------------------------
+    // 4. WRAP UP
+    // ---------------------------------------------------------
     animator.Animate(dt);
+
     playerposmanager.BroadcastSpecialMessage(
         "PLAYER_POS_UPDATE " + to_string(pos.x) + " " + to_string(pos.y)
     );
 }
 
 void Player::ResolveCollisions(double dt) {
-    // --- HORIZONTAL ---
+    // --- STEP 1: HORIZONTAL MOVEMENT ---
     pos.x += velocity.x * dt;
-    hitboxes[0].rect.x = pos.x - width / 2.0f;
-    hitboxes[0].rect.y = pos.y - height;
 
-    for (HasCollider* other : Collision::AllColliders) {
-        if (other == this) continue;
-        for (Hitbox& hbB : other->hitboxes) {
-            if (hbB.type != RIDGIDBOX) continue;
-            if (CheckCollisionRecs(hitboxes[0].rect, hbB.rect)) {
-                Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB.rect);
-                if (hitboxes[0].rect.x < hbB.rect.x) pos.x -= overlap.width;
-                else pos.x += overlap.width;
-                velocity.x = 0;
-                hitboxes[0].rect.x = pos.x - width / 2.0f;
-            }
-        }
+    // Update ALL hitboxes immediately after movement
+    hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
+    // This places the attackbox in front of the player based on facing (1 or -1)
+    if (facing == 1) hitboxes[1].rect.x = pos.x;
+    else hitboxes[1].rect.x = pos.x - ridgidbox_width * 1.5f;
+
+    vector<CollisionResult> xCollisions = Collision::CheckCollision(this);
+    for (auto& res : xCollisions) {
+        Hitbox* hbB = res.second;
+        if (hbB->type != RIDGIDBOX) continue;
+
+        Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB->rect);
+        if (hitboxes[0].rect.x < hbB->rect.x) pos.x -= overlap.width;
+        else pos.x += overlap.width;
+
+        velocity.x = 0;
+
+        // RE-SYNC ALL after resolution
+        hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
+        if (facing == 1) hitboxes[1].rect.x = pos.x;
+        else hitboxes[1].rect.x = pos.x - ridgidbox_width * 1.5f;
     }
 
-    // --- VERTICAL ---
+    // --- STEP 2: VERTICAL MOVEMENT ---
     grounded = false;
     pos.y += velocity.y * dt;
-    hitboxes[0].rect.y = pos.y - height;
 
-    for (HasCollider* other : Collision::AllColliders) {
-        if (other == this) continue;
-        for (Hitbox& hbB : other->hitboxes) {
-            if (hbB.type != RIDGIDBOX) continue;
-            if (CheckCollisionRecs(hitboxes[0].rect, hbB.rect)) {
-                Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB.rect);
+    // Update ALL hitboxes immediately
+    hitboxes[0].rect.y = pos.y - ridgidbox_height;
+    hitboxes[1].rect.y = pos.y - ridgidbox_height;
 
-                // If moving down or steady, and overlap is mostly from top
-                if (velocity.y >= 0 && (hitboxes[0].rect.y + hitboxes[0].rect.height) <= (hbB.rect.y + overlap.height + 1.0f)) {
-                    pos.y -= overlap.height;
-                    grounded = true;
-                    velocity.y = 0;
-                }
-                else if (velocity.y < 0) { // Hitting ceiling
-                    pos.y += overlap.height;
-                    velocity.y = 0;
-                }
-                hitboxes[0].rect.y = pos.y - height;
-            }
+    vector<CollisionResult> yCollisions = Collision::CheckCollision(this);
+    for (auto& res : yCollisions) {
+        Hitbox* hbB = res.second;
+        if (hbB->type != RIDGIDBOX) continue;
+
+        Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB->rect);
+        if (velocity.y >= 0 && (hitboxes[0].rect.y + hitboxes[0].rect.height) <= (hbB->rect.y + overlap.height + 1.0f)) {
+            pos.y -= overlap.height;
+            grounded = true;
+            velocity.y = 0;
         }
+        else if (velocity.y < 0) {
+            pos.y += overlap.height;
+            velocity.y = 0;
+        }
+
+        // RE-SYNC ALL after resolution
+        hitboxes[0].rect.y = pos.y - ridgidbox_height;
+        hitboxes[1].rect.y = pos.y - ridgidbox_height;
     }
 }
 
@@ -280,7 +344,8 @@ void Player::Draw() {
     DrawTexturePro(*tex, src, dest, origin, 0, WHITE);
 
     if (DEBUG_COLLISION) {
-        DrawRectangleLinesEx(hitboxes[0].rect, 1, RED);
+        DrawRectangleLinesEx(hitboxes[0].rect, 1, GREEN);
+        DrawRectangleLinesEx(hitboxes[1].rect, 1, RED);
     }
 }
 
@@ -297,4 +362,23 @@ void Player::OnEvent(string &command) {
     if (command == "PRESS_E") ready = !ready;
     if (command == "RELEASE_A" || command == "RELEASE_D") xchange = 0;
     if (command == "RELEASE_SHIFT") isrunning = false;
+    if (command == "PRESS_LEFT CLICK" and ready == true) {
+
+        // If not attacking, start Attack1
+        if (!isAttacking) {
+            isAttacking = true;
+            currentAttack = 1;
+            animator.ChangeAnimationState("ATTACK1");
+
+            std::cout << "[COMBAT] Attack1 STARTED" << std::endl;
+            playerposmanager.BroadcastMessage("ATTACKED");
+        }
+        // If already in Attack1, buffer Attack2
+        else if (isAttacking && currentAttack == 1) {
+            bufferedAttack = true;
+            std::cout << "[COMBAT] Attack2 BUFFERED during Attack1" << std::endl;
+        }
+    }
+
+
 }

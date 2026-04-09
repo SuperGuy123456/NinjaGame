@@ -10,6 +10,9 @@
 #include <vector>
 #include <iostream>
 
+using CollisionResult = std::pair<HasCollider*, Hitbox*>;
+
+
 class Collision {
 public:
     static vector<HasCollider*> AllColliders;
@@ -17,9 +20,10 @@ public:
     static void AddCollider(HasCollider* collider);
     static void RemoveCollider(HasCollider* collider);
 
-    static void CheckCollision(HasCollider* collider); //makes sure to ignore itself in the vector
-    static void CheckCollision(HasCollider* collider1, HasCollider* collider2);
-    static void CheckCollision(Hitbox* hitbox);
+    static bool CheckCollision(HasCollider* collider1, HasCollider* collider2);
+    static vector<CollisionResult> CheckCollision(HasCollider* collider);
+    static vector<CollisionResult> CheckCollision(Hitbox* hitbox);
+
 };
 
 

@@ -27,6 +27,10 @@ add_executable(NinjaGame
         Engine/Animation.cpp
         Engine/Animation.h
         Engine/Collision.cpp
-        Engine/Collision.h)
+        Engine/Collision.h
+        NPC/Dummy.cpp
+        NPC/Dummy.h
+        Effects/PhysicsBasedParticle.cpp
+        Effects/PhysicsBasedParticle.h)
 
 target_link_libraries(NinjaGame raylib)

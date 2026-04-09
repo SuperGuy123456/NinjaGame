@@ -12,6 +12,7 @@ public:
 	static const int NUMBEROFHOLDKEYS = 6;
 	static const int NUMBEROFPRESSKEYS = 7;
 	static const int NUMBEROFRELEASEKEYS = 6;
+	static const int NUMBEROFMOUSEPRESSKEYS = 2;
 
 	// HOLD keys
 	KeyboardKey holdkeys[NUMBEROFHOLDKEYS] = {
@@ -39,6 +40,11 @@ public:
 	string releasekeysreadable[NUMBEROFRELEASEKEYS] = {
 		"W", "A", "S", "D", "Space", "SHIFT"
 	};
+
+	MouseButton mousepresskeys[NUMBEROFMOUSEPRESSKEYS] = {MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT};
+	string mousepresskeysreadable[NUMBEROFMOUSEPRESSKEYS] = {"LEFT CLICK", "RIGHT CLICK"};
+	MouseButton mousereleasekeys[NUMBEROFMOUSEPRESSKEYS] = {MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT};
+	string mousereleasekeysreadable[NUMBEROFMOUSEPRESSKEYS] = {"LEFT CLICK", "RIGHT CLICK"};
 
 	InputManager(EventManager& _eventmanager);
 	~InputManager();

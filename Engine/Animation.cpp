@@ -1,121 +1,106 @@
-//
-// Created by Manomay Tyagi on 4/6/26.
-//
-
 #include "Animation.h"
-
 #include <iostream>
-#include <ostream>
 
-void Animator::AddAnimationState(const string &name, const Animation &animation) {
-    animations.emplace(name, animation);
+Animator::Animator(std::vector<Texture2D>* frameSource)
+    : frames(frameSource) {}
+
+void Animator::AddAnimationState(const std::string& name, const Animation& anim) {
+    animations[name] = anim;   // safe copy
 }
 
-void Animator::ChangeAnimationState(const string &name) {
-
-    // If already playing this animation, do nothing
-    if (currentAnimation == name)
+void Animator::ChangeAnimationState(const std::string& name) {
+    if (currentName == name)
         return;
 
-    // If a blocking animation is currently active, do not interrupt
-    if (blockingActive)
+    if (blocking)
         return;
 
     auto& anim = animations.at(name);
 
-    currentAnimation = name;
-    activeAnim = &anim;
+    currentName = name;
+    active = &anim;
 
     currentFrame = anim.reverse ? anim.frames.size() - 1 : 0;
     timer = 0.0f;
     loopsRemaining = anim.loopCount;
 
-    // If this animation is a blocking one, activate block
-    blockingActive = anim.blockStates;
+    blocking = anim.blockStates;
+
+    currentTexture = &(*frames)[active->frames[currentFrame]];
 }
 
-
-
-
-void Animator::Animate(float deltaTime) {
-    if (!activeAnim) {
+void Animator::Animate(float dt) {
+    if (!active)
         return;
-    }
 
+    timer += dt;
 
+    int count = active->frames.size();
 
-    // Advance timer
-    timer += deltaTime;
+    if (timer >= active->timePerFrame) {
+        timer -= active->timePerFrame;
 
-
-
-    // Frame info
-    int frameCount = activeAnim->frames.size();
-
-
-    // If enough time has passed, move to next frame
-    if (timer >= activeAnim->timePerFrame) {
-
-
-        timer -= activeAnim->timePerFrame;
-
-        // Reverse playback
-        if (activeAnim->reverse) {
+        // Advance frame
+        if (active->reverse)
             currentFrame--;
-        } else {
+        else
             currentFrame++;
-        }
 
-        // Looping / bounds
-        if (!activeAnim->loop) {
-            if (currentFrame >= frameCount) currentFrame = frameCount - 1;
-            if (currentFrame < 0) currentFrame = 0;
-        }
-        else {
-            if (currentFrame >= frameCount) {
+        // Looping logic
+        if (active->loop) {
+            if (currentFrame >= count) {
                 currentFrame = 0;
 
-                if (activeAnim->loopCount > 0) {
+                if (active->loopCount > 0) {
                     loopsRemaining--;
-                    if (loopsRemaining <= 0) {
-                        currentFrame = frameCount - 1;
-                    }
+                    if (loopsRemaining <= 0)
+                        currentFrame = count - 1;
                 }
             }
-
             if (currentFrame < 0) {
-                currentFrame = frameCount - 1;
+                currentFrame = count - 1;
 
-                if (activeAnim->loopCount > 0) {
+                if (active->loopCount > 0) {
                     loopsRemaining--;
-                    if (loopsRemaining <= 0) {
+                    if (loopsRemaining <= 0)
                         currentFrame = 0;
-                    }
                 }
             }
         }
-    }
-    else {
-
-    }
-
-
-
-    // Only unblock if we actually ADVANCED into the last frame
-    if (!activeAnim->loop &&
-        ((activeAnim->reverse && currentFrame == 0) ||
-         (!activeAnim->reverse && currentFrame == activeAnim->frames.size() - 1)))
-    {
-        blockingActive = false;
+        else {
+            // Clamp for non-looping
+            if (currentFrame >= count)
+                currentFrame = count - 1;
+            if (currentFrame < 0)
+                currentFrame = 0;
+        }
     }
 
+    // Unblock when animation reaches its final frame
+    if (!active->loop) {
+        bool lastFrame = active->reverse
+            ? (currentFrame == 0)
+            : (currentFrame == count - 1);
 
+        if (lastFrame)
+            blocking = false;
+    }
 
-
-    // Return the current frame texture
-    currenttexture = activeAnim->frames[currentFrame];
+    currentTexture = &(*frames)[active->frames[currentFrame]];
 }
 
 Texture2D* Animator::GetTexture() {
-    return currenttexture;
+    return currentTexture;
 }
+
+bool Animator::IsAnimationFinished() const {
+    if (!active) return true;
+    if (active->loop) return false;
+
+    bool lastFrame = active->reverse
+        ? (currentFrame == 0)
+        : (currentFrame == active->frames.size() - 1);
+
+    return lastFrame;
+}
+

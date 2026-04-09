@@ -42,11 +42,11 @@ private:
     Vector2 velocity = {0, 0};
     float gravity = 2000.0f;
     float maxFallSpeed = 2000.0f;
-    float jumpStrength = -1000.0f;
+    float jumpStrength = -1100.0f;
 
-    // Hitbox (aligned to tiles)
-    float width = 20;
-    float height = 40;
+    // RIDGIDBOX (aligned to tiles)
+    float ridgidbox_width = 30;
+    float ridgidbox_height = 120;
 
     // Movement state
     int facing = 1;
@@ -58,6 +58,15 @@ private:
     // Ready stance
     bool ready = false;
     bool wasready = false;
+
+    //attack stuff
+    bool isAttacking = false;
+    int comboStep = 0;           // 0 = None, 1 = Attack1, 2 = Attack2
+    float comboTimer = 0.0f;     // Time left to trigger next combo
+    bool leftClickPressed = false;
+    bool canClickAgain = true;   // Ensures they must release before clicking again
+    int currentAttack = 0; // 0 = none, 1 = attack1, 2 = attack2
+    bool bufferedAttack = false;
 
     // NEW: Animator
     Animator animator;

@@ -9,6 +9,7 @@
 #include "Player.h"
 #include "screenres.h"
 #include "Engine/Chunks.h"
+#include "NPC/Dummy.h"
 
 using namespace std;
 //ENTIRE GAME RUNS ON PIXEL ART WITH SCALE OF 10
@@ -27,6 +28,8 @@ int main() {
 
     std::cout << "[BOOT] SetWindowPosition...\n";
     SetWindowPosition((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2);
+    InitAudioDevice();
+
 
     std::cout << "[BOOT] SetTargetFPS...\n";
     SetTargetFPS(60);
@@ -72,15 +75,27 @@ int main() {
 
     std::cout << "[BOOT] Entering main loop...\n";
 
+    Dummy dummy({196.707, 732.234}, entitylayer,playerposmanager, chunkmanager);
+
     SetTargetFPS(60);
 
     // ---------------- Main Loop ----------------
     while (!WindowShouldClose()) {
+        Vector2 mouseScreen = GetMousePosition();
+        Vector2 mouseWorld = GetScreenToWorld2D(mouseScreen, camera);
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            std::cout << "Mouse World Pos: "
+                      << mouseWorld.x << ", "
+                      << mouseWorld.y << std::endl;
+        }
+
         double dt = GetFrameTime();
 
         inputmanager.GetInput();
         player.Update(dt);
         chunkmanager.Update();
+        dummy.Update(dt);
 
         // ---------------- Camera Update (AFTER player moves) ----------------
         float lerp = 0.15f;
@@ -101,6 +116,7 @@ int main() {
         ClearBackground(Color{135, 206, 235});
         DrawFPS(0,0);
         BeginMode2D(camera);
+        //dummy.Draw();
         pipeline.DrawAll();
 
         EndMode2D();

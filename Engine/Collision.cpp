@@ -16,59 +16,53 @@ void Collision::RemoveCollider(HasCollider *collider) {
     AllColliders.end());
 }
 
-void Collision::CheckCollision(HasCollider* collider) {
-    if (!collider) return;
+vector<CollisionResult> Collision::CheckCollision(HasCollider* collider) {
+    vector<CollisionResult> results;
+    if (!collider) return results;
 
     for (auto* other : AllColliders) {
         if (!other || other == collider) continue;
 
-        // Compare all hitboxes of collider vs all hitboxes of other
         for (auto& hbA : collider->hitboxes) {
             for (auto& hbB : other->hitboxes) {
                 if (CheckCollisionRecs(hbA.rect, hbB.rect)) {
-                    std::cout << "Collision: "
-                              << collider->tag << " (" << hbA.name << ")"
-                              << " hit "
-                              << other->tag << " (" << hbB.name << ")"
-                              << std::endl;
+                    results.push_back({ other, &hbB });
                 }
             }
         }
     }
+
+    return results;
 }
 
 
-void Collision::CheckCollision(HasCollider* a, HasCollider* b) {
-    if (!a || !b || a == b) return;
+bool Collision::CheckCollision(HasCollider* a, HasCollider* b) {
+    if (!a || !b || a == b) return false;
 
     for (auto& hbA : a->hitboxes) {
         for (auto& hbB : b->hitboxes) {
             if (CheckCollisionRecs(hbA.rect, hbB.rect)) {
-                std::cout << "Collision: "
-                          << a->tag << " (" << hbA.name << ")"
-                          << " hit "
-                          << b->tag << " (" << hbB.name << ")"
-                          << std::endl;
+                return true;
             }
         }
     }
+    return false;
 }
 
 
-void Collision::CheckCollision(Hitbox* hitbox) {
-    if (!hitbox) return;
+vector<CollisionResult> Collision::CheckCollision(Hitbox* hitbox) {
+    vector<CollisionResult> results;
+    if (!hitbox) return results;
 
     for (auto* other : AllColliders) {
         if (!other) continue;
 
         for (auto& hb : other->hitboxes) {
             if (CheckCollisionRecs(hitbox->rect, hb.rect)) {
-                std::cout << "Hitbox-only collision: "
-                          << hitbox->name
-                          << " hit "
-                          << other->tag << " (" << hb.name << ")"
-                          << std::endl;
+                results.push_back({ other, &hb });
             }
         }
     }
+
+    return results;
 }
