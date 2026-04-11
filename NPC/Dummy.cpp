@@ -15,10 +15,10 @@ Dummy::Dummy(Vector2 pos, DrawLayer& _entitylayer, EventManager& _playerposmanag
 
     entitylayer.AddDrawCall(this, 0);
 
-    hayFrames = SpriteSplitter::SplitByHorizontal("../Art/Particles/Hay.png", 3, 8);
-    slashFrames = SpriteSplitter::SplitByHorizontal("../Art/Particles/WhiteSlash.png", 3, 8);
+    hayFrames = SpriteSplitter::SplitByHorizontal("../Art/Particles/Hay.png", 3, 0.8);
+    slashFrames = SpriteSplitter::SplitByHorizontal("../Art/Particles/WhiteSlash.png", 3, 0.8);
 
-    allframes = SpriteSplitter::SplitByHorizontal("../Art/Test/FightDummy.png", 15, 10);
+    allframes = SpriteSplitter::SplitByHorizontal("../Art/Test/FightDummy.png", 15, 1);
 
     Animation idle;
     idle.frames = {0 };
@@ -136,24 +136,24 @@ void Dummy::OnEvent(string &command) {
                 Vector2{pos.x + allframes[0].width/2, pos.y+ allframes[0].height/2},
                 Vector2{1, 0},
                 UNIFORM_EXPLOSION,
-                250.0f, 250.0f,
+                40.0f, 40.0f,
                 1.5f, 2.0f,
-                -60.0f, 60.0f,
+                -6.0f, 6.0f,
                 1.0f,
-                300.0f,
-                0.9888f,
+                30.0f,
+                0.98f,
                 &chunkmanager
                 );
                 slasheffects.emplace_back(
                 &slashFrames,
                 Vector2{pos.x + allframes[0].width/2, pos.y+ allframes[0].height/2},
-                600.0f,      // speed
+                60.0f,      // speed
                 1.0f,        // scale
                 0.1f,       // duration
                 SLASH_UNIFORM, 10
                 );
                 GameCamera::PulseZoom(1.1f, 1.0f);
-                GameCamera::TriggerShake(8.0f, 1.0f);
+                GameCamera::TriggerShake(3.0f, 1.0f);
 
                 animator.ChangeAnimationState("HURT");
                 PlaySound(hit);

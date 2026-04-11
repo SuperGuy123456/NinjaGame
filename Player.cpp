@@ -17,7 +17,7 @@ Player::Player(Vector2 pos,
     // -----------------------------
     // LOAD ALL FRAMES
     // -----------------------------
-    allframes = SpriteSplitter::SplitByHorizontal("../Art/Player/ninjaframes.png", 15, 10);
+    allframes = SpriteSplitter::SplitByHorizontal("../Art/Player/ninjaframes.png", 15, 1);
 
     // Helper: return a vector of frame indices instead of pointers
     auto Slice = [&](int start, int count) {
@@ -208,7 +208,7 @@ void Player::Update(double& dt) {
     if (IsKeyDown(KEY_A)) { xchange = -1; facing = -1; }
     if (IsKeyDown(KEY_D)) { xchange = 1; facing = 1; }
 
-    float currentSpeed = (isrunning ? 1000.0f : 600.0f);
+    float currentSpeed = (isrunning ? 100.0f : 60.0f); // Was 1000 and 600
     velocity.x = xchange * currentSpeed;
 
     // ---------------------------------------------------------
@@ -361,7 +361,7 @@ void Player::ResolveCollisions(double dt) {
 void Player::Draw() {
     Texture* tex = animator.GetTexture();
     Rectangle src = {0, 0, facing * (float)tex->width, (float)tex->height};
-    Rectangle dest = {pos.x, pos.y+1, (float)tex->width, (float)tex->height};
+    Rectangle dest = {pos.x, pos.y, (float)tex->width, (float)tex->height};
     Vector2 origin = {tex->width/2.0f, (float)tex->height};
 
     DrawTexturePro(*tex, src, dest, origin, 0, WHITE);

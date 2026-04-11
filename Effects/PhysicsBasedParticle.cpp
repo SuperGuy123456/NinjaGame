@@ -98,12 +98,21 @@ void PhysicsBasedParticle::Update(float dt) {
         Vector2 nextPos = { p.pos.x + p.vel.x * dt, p.pos.y + p.vel.y * dt };
         Rectangle nextBox = { nextPos.x, nextPos.y, 2, 2 };
 
-        if (chunkmanager && chunkmanager->CheckTileCollision({nextBox.x, nextBox.y}) != 0) {
-            p.vel.y *= -0.3f;
-            p.vel.x *= 0.7f;
+        // --- UPDATED COLLISION CHECK ---
+        if (chunkmanager) {
+            int tileID = chunkmanager->CheckTileCollision({nextPos.x, nextPos.y});
 
-            if (fabs(p.vel.y) < 20)
-                p.vel.y = 0;
+            // If the tile is solid (not 0) AND it's not Grass (not 3)
+            if (tileID != 0 && tileID != 3) {
+                p.vel.y *= -0.3f; // Bounce
+                p.vel.x *= 0.7f; // Friction
+
+                if (fabs(p.vel.y) < 20)
+                    p.vel.y = 0;
+            } else {
+                // If it's air (0) OR grass (3), move through it freely
+                p.pos = nextPos;
+            }
         } else {
             p.pos = nextPos;
         }

@@ -40,13 +40,14 @@ private:
 
     // Physics
     Vector2 velocity = {0, 0};
-    float gravity = 2000.0f;
-    float maxFallSpeed = 2000.0f;
-    float jumpStrength = -1100.0f;
+    // physics scaled by 0.1f to match the 1/10th virtual resolution
+    float gravity = 200.0f;       // Was 2000.0f
+    float maxFallSpeed = 200.0f;  // Was 2000.0f
+    float jumpStrength = -110.0f; // Was -1100.0f
 
-    // RIDGIDBOX (aligned to tiles)
-    float ridgidbox_width = 30;
-    float ridgidbox_height = 120;
+    // ridgidbox (Must match your tile sizes in the 151x91 world)
+    float ridgidbox_width = 3.0f;  // Was 30
+    float ridgidbox_height = 12.0f; // Was 120
 
     // Movement state
     int facing = 1;

@@ -21,7 +21,8 @@
 using namespace std;
 
 
-#define PIXELSCALE 10
+#define PIXELSCALE 1
+#define COLLIDERSCALE 1
 #define TILESIZE 8
 
 #define TILESPERCHUNK 10

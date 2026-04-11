@@ -65,6 +65,14 @@ int main() {
     int screenWidth = GetMonitorWidth(monitor);
     int screenHeight = GetMonitorHeight(monitor);
 
+    // --- 1. SET UP THE VIRTUAL CANVAS ---
+    // Change these to your target "retro" resolution (e.g., 320x180 or 480x270)
+    const int virtualWidth = SCREENWIDTH / 10;
+    const int virtualHeight = SCREENHEIGHT / 10;
+    RenderTexture2D worldCanvas = LoadRenderTexture(virtualWidth, virtualHeight);
+    SetTextureFilter(worldCanvas.texture, TEXTURE_FILTER_POINT); // Keeps pixels crisp
+
+
     int windowWidth = (int)(screenWidth);
     int windowHeight = (int)(screenHeight);
 
@@ -112,7 +120,7 @@ int main() {
 
     // ---------------- Player ----------------
     std::cout << "[BOOT] Creating player...\n";
-    Player player(Vector2{100,100}, entitylayer, keyboardmanager, playerposmanager, &chunkmanager);
+    Player player(Vector2{20,0}, entitylayer, keyboardmanager, playerposmanager, &chunkmanager);
     ReferencePool::Add("PLAYER REF", &player);
 
     std::cout << "[BOOT] ChunkManager constructed successfully.\n";
@@ -123,43 +131,65 @@ int main() {
 
     std::cout << "[BOOT] Entering main loop...\n";
 
-    Dummy dummy({196.707, 732.234}, entitylayer, playerposmanager, chunkmanager);
+    Dummy dummy({19, 73}, entitylayer, playerposmanager, chunkmanager);
 
     // ---------------- Main Loop ----------------
+    // --- Main Loop ---
     while (!WindowShouldClose()) {
-
-        Vector2 mouseScreen = GetMousePosition();
-        Vector2 mouseWorld = GetScreenToWorld2D(mouseScreen, GameCamera::GetCamera());
-
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            std::cout << "Mouse World Pos: "
-                      << mouseWorld.x << ", "
-                      << mouseWorld.y << std::endl;
-        }
-
         dt = GetFrameTime();
 
+        // 1. UPDATE
         inputmanager.GetInput();
         player.Update(dt);
         chunkmanager.Update();
         dummy.Update(dt);
-
-        // ---------------- Camera Update ----------------
         GameCamera::Update(dt);
 
-        // ---------------- Drawing ----------------
-        BeginDrawing();
-        ClearBackground(Color{135, 206, 235});
-        DrawFPS(0,0);
-        PrintMemoryStats();
-        chunkmanager.Draw();
+        // 2. DRAW TO VIRTUAL CANVAS (151x91)
+        BeginTextureMode(worldCanvas);
+        // Force Alpha to 255 (Opaque)
+        ClearBackground(Color{135, 206, 235, 255});
         BeginMode2D(GameCamera::GetCamera());
+        //DrawRectangle(0,0,virtualWidth, virtualHeight, Color{255,255,255,255});
+        chunkmanager.Draw();
         pipeline.DrawAll();
         EndMode2D();
+        EndTextureMode();
 
+        // 3. DRAW TO ACTUAL SCREEN
+        BeginDrawing();
+        // Now you can safely use BLACK, it won't hide the game
+        ClearBackground(BLACK);
+
+        // SOURCE: Use a negative height to flip the texture right-side up
+        Rectangle src = {
+            0,
+            0,
+            (float)worldCanvas.texture.width,
+            -(float)worldCanvas.texture.height
+        };
+
+        // DESTINATION: Use GetScreenWidth/Height to ensure it fills the window perfectly
+        // This handles Retina/High-DPI scaling automatically
+        Rectangle dest = {
+            0,
+            0,
+            (float)GetScreenWidth(),
+            (float)GetScreenHeight()
+        };
+
+        // Origin {0,0} means we anchor to the top-left
+        Vector2 origin = { 0, 0 };
+
+        // Point filtering is already set, so this will be crisp
+        DrawTexturePro(worldCanvas.texture, src, dest, origin, 0.0f, WHITE);
+        // 4. HIGH-RES UI
+        DrawFPS(10, 10);
+        PrintMemoryStats();
         EndDrawing();
     }
 
+    UnloadRenderTexture(worldCanvas); // Clean up
     std::cout << "[BOOT] Exiting cleanly.\n";
     CloseWindow();
     return 0;

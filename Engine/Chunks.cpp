@@ -13,8 +13,8 @@ Chunk::Chunk(int cx, int cy, const vector<vector<int> > &tex, const vector<vecto
             if (id != 0 and id != 3) {
                 AddHitbox(
                     Rectangle{
-                    (float)x * TILESIZE * PIXELSCALE * TILESPERCHUNK + localX * TILESIZE * PIXELSCALE,
-                    (float)y * TILESIZE * PIXELSCALE * TILESPERCHUNK + localY * TILESIZE * PIXELSCALE,TILESIZE * PIXELSCALE, TILESIZE * PIXELSCALE},
+                    (float)x * TILESIZE * COLLIDERSCALE * TILESPERCHUNK + localX * TILESIZE * COLLIDERSCALE,
+                    (float)y * TILESIZE * COLLIDERSCALE * TILESPERCHUNK + localY * TILESIZE * COLLIDERSCALE,TILESIZE * COLLIDERSCALE, TILESIZE * COLLIDERSCALE},
                 "TILE AT: " + to_string(x) + "," + to_string(y),
                 RIDGIDBOX
                 );
@@ -51,10 +51,10 @@ void Chunk::Draw() {
             for (int id : row) {
                 if (id != 0) {
                     DrawRectangle(
-                        x * TILESIZE * PIXELSCALE * TILESPERCHUNK + localX * TILESIZE * PIXELSCALE,
-                        y * TILESIZE * PIXELSCALE * TILESPERCHUNK + localY * TILESIZE * PIXELSCALE,
-                        TILESIZE * PIXELSCALE,
-                        TILESIZE * PIXELSCALE,
+                        x * TILESIZE * COLLIDERSCALE * TILESPERCHUNK + localX * TILESIZE * COLLIDERSCALE,
+                        y * TILESIZE * COLLIDERSCALE * TILESPERCHUNK + localY * TILESIZE * COLLIDERSCALE,
+                        TILESIZE * COLLIDERSCALE,
+                        TILESIZE * COLLIDERSCALE,
                         Color{255, 255, 255, 80}
                     );
                 }
@@ -130,7 +130,7 @@ void Chunk::Startup() {
 //-----CHUNKMANAGER STUFF-----
 ChunkManager::ChunkManager(DrawLayer& _bglayer, EventManager& _playerposmanager) : bglayer(_bglayer), playerposmanager(_playerposmanager) {
     std::cout << "[CHUNK] SplitGrid starting...\n";
-    tiletexs = SpriteSplitter::SplitGrid("../Art/Tilemap/Tilemap.png", 8, 8, 4, 5, 10);
+    tiletexs = SpriteSplitter::SplitGrid("../Art/Tilemap/Tilemap.png", 8, 8, 4, 5, 1);
     std::cout << "[CHUNK] SplitGrid done. tiletexs.size() = " << tiletexs.size() << "\n";
 
     int chunksX = 50;
@@ -159,7 +159,6 @@ ChunkManager::~ChunkManager() {
     for (Chunk* chunkobj : allchunkobjs) {
         delete chunkobj;
     }
-    Grass::DeInit();
 }
 
 void ChunkManager::Update() {
@@ -174,13 +173,11 @@ void ChunkManager::Update() {
 }
 
 void ChunkManager::Draw() {
-    Grass::BeginRender();
     for (Chunk* ch : activechunkobjs) {
         for (Grass* grassobj : ch->grassobjs) {
-            grassobj->Draw(*GameCamera::target);
+            grassobj->Draw();
         }
     }
-    Grass::EndRender();
 }
 
 void ChunkManager::OnSpecialEvent(string &command, vector<string> params) {
@@ -239,7 +236,6 @@ void ChunkManager::OnSpecialEvent(string &command, vector<string> params) {
 
 void ChunkManager::ParseData() {
     std::ifstream file("../Levels/Level1_parsed.txt");
-    Grass::Init();
     if (!file.is_open()) {
         std::cout << "ERROR: Could not open parsed level file.\n";
         return;

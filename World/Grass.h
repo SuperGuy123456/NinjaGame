@@ -23,19 +23,10 @@ public:
     Grass(Vector2& _pos);
     ~Grass();
 
-    static void Init();
-    static void DeInit();
-    static void BeginRender();
-    static void EndRender();
-    void Draw() override{};
-    void Draw(Vector2 cameraPos);
+    void Draw();
     void Update();
 private:
     Vector2& pos;
-    static int scale;
-    static RenderTexture2D sharedTarget; // One texture for ALL grass
-    static int virtualWidth;
-    static int virtualHeight;
 
     const int max_height = 8;
     const int min_height = 4;
