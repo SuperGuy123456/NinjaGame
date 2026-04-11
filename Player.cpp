@@ -167,8 +167,31 @@ Player::Player(Vector2 pos,
 
 
 Player::~Player() {
+    // 1. Remove from Global Systems
     Collision::RemoveCollider(this);
-    for (Texture2D& tex : allframes) UnloadTexture(tex);
+    entitylayer.RemoveDrawCall(this); // <-- ADD THIS
+
+    // 2. Remove Event Listeners (Must match constructor IDs exactly)
+    keyboardmanager.RemoveListener("PLAYER_W");
+    keyboardmanager.RemoveListener("PLAYER_A");
+    keyboardmanager.RemoveListener("PLAYER_S");
+    keyboardmanager.RemoveListener("PLAYER_D");
+    keyboardmanager.RemoveListener("PLAYER_SHIFT");
+    keyboardmanager.RemoveListener("PLAYER_E");
+    keyboardmanager.RemoveListener("PLAYER_R_W");
+    keyboardmanager.RemoveListener("PLAYER_R_A");
+    keyboardmanager.RemoveListener("PLAYER_R_S");
+    keyboardmanager.RemoveListener("PLAYER_R_D");
+    keyboardmanager.RemoveListener("PLAYER_R_SHIFT");
+
+    // Corrected these to match your constructor IDs
+    keyboardmanager.RemoveListener("PRESS_LEFT CLICK");
+    keyboardmanager.RemoveListener("RELEASE_LEFT CLICK");
+
+    // 3. Free GPU Memory
+    for (Texture2D& tex : allframes) {
+        UnloadTexture(tex);
+    }
 }
 
 bool Player::IsSolid(float wx, float wy) {

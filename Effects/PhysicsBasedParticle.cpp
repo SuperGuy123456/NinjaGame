@@ -119,6 +119,8 @@ void PhysicsBasedParticle::Update(float dt) {
                        [](const Particle& p){ return p.alpha <= 0; }),
         particles.end()
     );
+    particles.shrink_to_fit();
+
 
     if (particles.empty())
         dead = true;

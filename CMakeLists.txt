@@ -31,6 +31,14 @@ add_executable(NinjaGame
         NPC/Dummy.cpp
         NPC/Dummy.h
         Effects/PhysicsBasedParticle.cpp
-        Effects/PhysicsBasedParticle.h)
+        Effects/PhysicsBasedParticle.h
+        Effects/SlashEffect.cpp
+        Effects/SlashEffect.h
+        Engine/GameCamera.cpp
+        Engine/GameCamera.h
+        World/Grass.cpp
+        World/Grass.h
+        Engine/ReferencePool.cpp
+        Engine/ReferencePool.h)
 
 target_link_libraries(NinjaGame raylib)

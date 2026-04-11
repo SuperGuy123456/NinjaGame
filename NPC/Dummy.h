@@ -12,6 +12,8 @@
 #include "BaseClasses/Base.h"
 #include "Engine/Spritesplitter.h"
 #include "Effects/PhysicsBasedParticle.h"
+#include "Effects/SlashEffect.h"
+#include "Engine/GameCamera.h"
 
 /*
  * super simple dummy that waits to get hit and tests effects and sound >_<
@@ -40,6 +42,8 @@ private:
     Sound hit;
 
     vector<PhysicsBasedParticle> hayeffects;
+    vector<SlashEffect> slasheffects;
+    vector<Texture2D> slashFrames;
     vector<Texture2D> hayFrames;
 };
 

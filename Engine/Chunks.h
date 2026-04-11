@@ -13,6 +13,7 @@
 #include <iostream>     // std::cout
 #include <cstdlib>      // stoi
 #include "Engine/Collision.h"
+#include "World/Grass.h"
 
 //in order to support variable map sizes (although the maps must be divisible CLEANLY into chunks) i must use vectors
 
@@ -42,12 +43,15 @@ public:
 
     void Shutdown(); //finsihes up tasks before entering sleep mode (for npc stuff)
     void Startup(); //to tell anything to "wake up"
+
+    vector<Grass*> grassobjs;
 private:
     int x, y; // chunk coordinates (for drawing)
 
     const vector<vector<int>>& texData;   // tile IDs
     const vector<vector<int>>& colData;   // collision IDs
     const vector<Texture2D>& tiletexs; //so I don't waste memory and copy textures often
+    vector<Vector2> grasstileposes;
 
     DrawLayer& bglayer;
 };
@@ -59,7 +63,7 @@ public:
     ChunkManager(DrawLayer& _bglayer, EventManager& _playerposmanager);
     ~ChunkManager();
 
-    void Draw() override {};
+    void Draw() override;
     void Update(); // calls the chunk updates (only active ones)
 
     int CheckTileCollision(const Vector2& worldPos); //tilepos is GLOBAL COORDS (finds chunk its in, then queries with chunk)
@@ -77,6 +81,7 @@ private:
     vector<vector<Chunk*>> coordchunks;
     vector<Chunk*> activechunkobjs;
     vector<Chunk*> prevactivechunkobjs; //useful for initializing previously sleeping chunks and telling previosly active ones to shutdown
+    vector<Chunk*> chunkstokill;
 
     //for the chunkdata
     vector<vector<vector<vector<int>>>> texdata; //T-T sorry future me: [chunk x][chunk y][tile x][tile y]

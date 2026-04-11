@@ -1,25 +1,23 @@
 import xml.etree.ElementTree as ET
 
-CHUNK_SIZE = 10   # tiles per chunk (20x20)
+CHUNK_SIZE = 10   # tiles per chunk (10x10)
 
-# Collision groups use EDITOR indices (0-based)
 COLLISION_GROUPS = {
     "passable": [-1, 6],
     "rigid":    [0,1,2,3,4,5,7,8,9,10,11,12,13,14],
     "danger":   [],
-    "special":  [],
+    "grass":    [15],
 }
 
 CATEGORY_ID = {
     "passable": 0,
     "rigid":    1,
     "danger":   2,
-    "special":  3,
+    "grass":    3
 }
 
 DEFAULT_COLLISION = CATEGORY_ID["passable"]
 
-# Build lookup table
 tile_to_collision = {}
 for category, ids in COLLISION_GROUPS.items():
     for tid in ids:
@@ -47,17 +45,27 @@ def parse_tmx(path):
     for cy in range(chunks_y):
         for cx in range(chunks_x):
 
-            # Convert TMX GID → engine index (0-based)
-            chunk = [
-                [tid-1 for tid in row[cx*CHUNK_SIZE:(cx+1)*CHUNK_SIZE]]
-                for row in grid[cy*CHUNK_SIZE:(cy+1)*CHUNK_SIZE]
-            ]
+            chunk = []
+            col_chunk = []
 
-            col_chunk = [
-                [tile_to_collision.get(tid, DEFAULT_COLLISION) for tid in row]
-                for row in chunk
-            ]
+            for row in grid[cy*CHUNK_SIZE:(cy+1)*CHUNK_SIZE]:
+                tex_row = []
+                col_row = []
 
+                for tid in row[cx*CHUNK_SIZE:(cx+1)*CHUNK_SIZE]:
+                    engine_tid = tid - 1
+
+                    if engine_tid == 15:  # grass tile
+                        tex_row.append(-1)  # do NOT draw
+                        col_row.append(CATEGORY_ID["grass"])
+                    else:
+                        tex_row.append(engine_tid)
+                        col_row.append(tile_to_collision.get(engine_tid, DEFAULT_COLLISION))
+
+                chunk.append(tex_row)
+                col_chunk.append(col_row)
+
+            # <-- FIX: append AFTER finishing the whole chunk
             all_chunks.append((chunk, col_chunk))
 
     return all_chunks

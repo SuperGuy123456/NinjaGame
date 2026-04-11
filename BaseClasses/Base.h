@@ -3,117 +3,119 @@
 #include <vector>
 #include "raylib.h"
 
-
 using namespace std;
-// To store diff classes in same array
 
+// To store diff classes in same array
 struct Node {
-	int x, y;
-	float gCost, hCost;
-	Node* parent;
-	float fCost() const { return gCost + hCost; }
+    int x, y;
+    float gCost, hCost;
+    Node* parent;
+    float fCost() const { return gCost + hCost; }
 };
 
 enum HitboxType {
-	ATTACKBOX,
-	HURTBOX,
-	TRIGGERBOX,
-	RIDGIDBOX
+    ATTACKBOX,
+    HURTBOX,
+    TRIGGERBOX,
+    RIDGIDBOX
 };
 
 struct Hitbox {
-	Rectangle rect;
-	string name;
-	HitboxType type;
+    Rectangle rect;
+    string name;
+    HitboxType type;
 };
 
 class HasCollider {
 public:
-	vector<Hitbox> hitboxes;
-	string tag; //when collsion is returned, passes: [OBJECT TAG][HITBOXNAME][HITBOX TYPE][RECT REFERENCE (to the hitbox for position and size stuff)]
+    virtual ~HasCollider() = default; // Added virtual destructor
+    vector<Hitbox> hitboxes;
+    string tag;
 
-	void AddHitbox(Rectangle r, const string& name, HitboxType type) {
-		hitboxes.push_back({r, name, type});
-	}
+    void AddHitbox(Rectangle r, const string& name, HitboxType type) {
+       hitboxes.push_back({r, name, type});
+    }
 };
+
 class Load
 {
 public:
-	virtual void Draw() = 0;
+    virtual ~Load() = default; // Added virtual destructor
+    virtual void Draw() = 0;
 };
 
 class Listener
 {
 public:
-	virtual void OnEvent(string& command) = 0;
-
-	virtual void OnSpecialEvent(string& command, vector<string> params) {};
+    virtual ~Listener() = default; // Added virtual destructor
+    virtual void OnEvent(string& command) = 0;
+    virtual void OnSpecialEvent(string& command, vector<string> params) {};
 };
 
 class ChunkObject
 {
 public:
-	virtual void Update() = 0;
-	virtual void PlayerNear() = 0;
-	virtual void PlayerFar() = 0;
+    virtual ~ChunkObject() = default; // Added virtual destructor
+    virtual void Update() = 0;
+    virtual void PlayerNear() = 0;
+    virtual void PlayerFar() = 0;
 
-	virtual void Startup() = 0;
-	virtual void Shutdown() = 0;
+    virtual void Startup() = 0;
+    virtual void Shutdown() = 0;
 };
-
 
 struct AnimationFrames
 {
-	vector<Texture2D> run;
-	vector<Texture2D> idle;
+    vector<Texture2D> run;
+    vector<Texture2D> idle;
 };
 
 struct listenerload
 {
-	Listener* listener;
-	string command;
+    Listener* listener;
+    string command;
 };
 
 enum NPCState
 {
-	NPC_NORMAL, //Patrolling for patrol npcs, idle for stationary npcs
-	NPC_SCARED, //Flee
-	NPC_AGGRESSIVE, //For future use
-	NPC_IDLE //For npcs that have been triggered to stop moving
+    NPC_NORMAL,
+    NPC_SCARED,
+    NPC_AGGRESSIVE,
+    NPC_IDLE
 };
 
 class BaseNPC : public Load, public Listener, public HasCollider, public ChunkObject
 {
 protected:
-	Vector2 chunkpos;
+    Vector2 chunkpos;
+    string name;
+    int health;
 
-	string name;
-	int health;
+    int cframe = 0;
+    float lasttime = 0.0f;
+    int facingright = 1;
+    NPCState state = NPCState::NPC_NORMAL;
 
-	int cframe = 0;
-	float lasttime = 0.0f;
-	int facingright = 1;
-	NPCState state = NPCState::NPC_NORMAL;
+    AnimationFrames hatframes;
+    AnimationFrames headframes;
+    AnimationFrames torsoframes;
+    AnimationFrames armsframes;
+    AnimationFrames legsframes;
 
-	AnimationFrames hatframes;
-	AnimationFrames headframes;
-	AnimationFrames torsoframes;
-	AnimationFrames armsframes;
-	AnimationFrames legsframes;
-
-	vector<AnimationFrames*> bodyframes = { &legsframes, &armsframes, &torsoframes, &headframes, &hatframes };
-	vector<AnimationFrames*> draworder = { &torsoframes, &legsframes, &headframes, &armsframes, &hatframes };
+    vector<AnimationFrames*> bodyframes = { &legsframes, &armsframes, &torsoframes, &headframes, &hatframes };
+    vector<AnimationFrames*> draworder = { &torsoframes, &legsframes, &headframes, &armsframes, &hatframes };
 public:
-	Vector2 position;
+    virtual ~BaseNPC() = default; // Added virtual destructor
+    Vector2 position;
 
-	virtual void OnEvent(string& command) override = 0; // For eventmanager
-	virtual void OnSpecialEvent(string& command, vector<string> params) override {}; //For player pos updates
+    virtual void OnEvent(string& command) override = 0;
+    virtual void OnSpecialEvent(string& command, vector<string> params) override {};
 
-	virtual void Draw() override = 0; //Called by chunk
-	virtual void Update() override = 0; // Called by chunk
-	virtual void PlayerNear() override = 0;
-	virtual void PlayerFar() override = 0;
+    virtual void Draw() override = 0;
+    virtual void Update() override = 0;
+    virtual void PlayerNear() override = 0;
+    virtual void PlayerFar() override = 0;
 
-	virtual void Shutdown() override = 0; //If chunk is about to be unloaded
-	virtual void Startup() override = 0; //If chunk is loaded
+    virtual void Shutdown() override = 0;
+    virtual void Startup() override = 0;
 };
