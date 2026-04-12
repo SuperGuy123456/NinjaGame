@@ -19,12 +19,14 @@ struct SoundSource {
 
 class SoundSystem {
 public:
+    static void AddBgMusic(Sound sound, float volume);
     static void AddSoundSource(SoundSource soundsource, string id);
     static void RemoveSoundSource(string id);
     static void Update();
 private:
 
     static map<string, SoundSource> sources;
+    static map<float, Sound> bgsounds;
 };
 
 #endif //NINJAGAME_SOUNDSYSTEM_H

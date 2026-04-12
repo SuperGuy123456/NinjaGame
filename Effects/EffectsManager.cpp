@@ -88,7 +88,6 @@ void EffectsManager::SpawnSlashEffect(const std::vector<Texture2D> *frames, Vect
 }
 
 void EffectsManager::Draw() {
-    DrawCircle(10, 10, 5, RED); // Should appear in top-left of sky
     for (Effect* effect : currentEffects) {
         effect->Draw();
     }

@@ -86,8 +86,8 @@ int main() {
     SetTargetFPS(60);
 
     EffectsManager::Init();
-    Sound testsound = LoadSound("../Audio/Fight/random.wav");
-    SoundSource testsource = {};
+    Sound bgsound = LoadSound("../Audio/Environmental Music/bgmusic.ogg");
+    SoundSystem::AddBgMusic(bgsound, 1.0f);
 
     // ---------------- Drawing Pipeline ----------------
     std::cout << "[BOOT] Creating drawing pipeline...\n";
@@ -201,7 +201,6 @@ int main() {
     }
 
     UnloadRenderTexture(worldCanvas); // Clean up
-    UnloadSound(testsound);
     EffectsManager::DeInit();
     std::cout << "[BOOT] Exiting cleanly.\n";
     CloseWindow();

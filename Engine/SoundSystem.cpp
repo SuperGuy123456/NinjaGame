@@ -5,6 +5,11 @@
 #include "SoundSystem.h"
 
 map<string, SoundSource> SoundSystem::sources;
+map<float, Sound> SoundSystem::bgsounds;
+
+void SoundSystem::AddBgMusic(Sound sound, float volume) {
+    SoundSystem::bgsounds[volume] = sound;
+}
 
 void SoundSystem::AddSoundSource(SoundSource soundsource, string id) {
     SoundSystem::sources[id] = soundsource;
@@ -44,4 +49,14 @@ void SoundSystem::Update() {
             }
         }
     }
+
+    for (auto& [volume, sound] :  SoundSystem::bgsounds) {
+        if (!IsSoundPlaying(sound)) {
+            SetSoundVolume(sound, volume);
+            PlaySound(sound);
+        }
+
+    }
+
+
 }
