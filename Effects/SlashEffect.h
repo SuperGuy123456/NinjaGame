@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include <vector>
+#include "BaseClasses/Base.h"
 
 enum SlashType {
     SLASH_ONE_SIDE,
@@ -9,7 +10,7 @@ enum SlashType {
     SLASH_UNIFORM
 };
 
-class SlashEffect {
+class SlashEffect : public Effect{
 public:
     SlashEffect(
     const std::vector<Texture2D>* frames,
@@ -22,9 +23,9 @@ public:
 );
 
 
-    void Update(float dt);
-    void Draw();
-    bool IsFinished() const { return dead; }
+    void Update(double dt) override;
+    void Draw() override;
+    bool IsFinished() const override{ return dead; }
 
 private:
     const std::vector<Texture2D>* textures;

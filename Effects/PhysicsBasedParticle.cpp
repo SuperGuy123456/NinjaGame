@@ -78,7 +78,7 @@ PhysicsBasedParticle::PhysicsBasedParticle(
     }
 }
 
-void PhysicsBasedParticle::Update(float dt) {
+void PhysicsBasedParticle::Update(double dt) {
     if (particles.empty()) {
         dead = true;
         return;
@@ -95,7 +95,7 @@ void PhysicsBasedParticle::Update(float dt) {
         p.vel.y += gravity * dt;
         p.vel.x *= drag;
 
-        Vector2 nextPos = { p.pos.x + p.vel.x * dt, p.pos.y + p.vel.y * dt };
+        Vector2 nextPos = { p.pos.x + p.vel.x * static_cast<float>(dt), p.pos.y + p.vel.y * static_cast<float>(dt) };
         Rectangle nextBox = { nextPos.x, nextPos.y, 2, 2 };
 
         // --- UPDATED COLLISION CHECK ---

@@ -11,8 +11,7 @@
 #include "EventManager.h"
 #include "BaseClasses/Base.h"
 #include "Engine/Spritesplitter.h"
-#include "Effects/PhysicsBasedParticle.h"
-#include "Effects/SlashEffect.h"
+#include "Effects/EffectsManager.h"
 #include "Engine/GameCamera.h"
 
 /*
@@ -41,10 +40,6 @@ private:
 
     Sound hit;
 
-    vector<PhysicsBasedParticle> hayeffects;
-    vector<SlashEffect> slasheffects;
-    vector<Texture2D> slashFrames;
-    vector<Texture2D> hayFrames;
 };
 
 

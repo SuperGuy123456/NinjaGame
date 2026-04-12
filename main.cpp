@@ -14,6 +14,8 @@
 #include <mach/mach.h>
 #include <iostream>
 #include "Engine/ReferencePool.h"
+#include "Effects/EffectsManager.h"
+#include "Engine/SoundSystem.h"
 
 using namespace std;
 
@@ -83,6 +85,10 @@ int main() {
     std::cout << "[BOOT] SetTargetFPS...\n";
     SetTargetFPS(60);
 
+    EffectsManager::Init();
+    Sound testsound = LoadSound("../Audio/Fight/random.wav");
+    SoundSource testsource = {};
+
     // ---------------- Drawing Pipeline ----------------
     std::cout << "[BOOT] Creating drawing pipeline...\n";
     DrawingPipeline pipeline;
@@ -144,6 +150,10 @@ int main() {
         chunkmanager.Update();
         dummy.Update(dt);
         GameCamera::Update(dt);
+        EffectsManager::Update();
+
+        // Don't forget to update the system to actually process the audio
+        SoundSystem::Update();
 
         // 2. DRAW TO VIRTUAL CANVAS (151x91)
         BeginTextureMode(worldCanvas);
@@ -153,6 +163,7 @@ int main() {
         //DrawRectangle(0,0,virtualWidth, virtualHeight, Color{255,255,255,255});
         chunkmanager.Draw();
         pipeline.DrawAll();
+        EffectsManager::Draw();
         EndMode2D();
         EndTextureMode();
 
@@ -190,6 +201,8 @@ int main() {
     }
 
     UnloadRenderTexture(worldCanvas); // Clean up
+    UnloadSound(testsound);
+    EffectsManager::DeInit();
     std::cout << "[BOOT] Exiting cleanly.\n";
     CloseWindow();
     return 0;

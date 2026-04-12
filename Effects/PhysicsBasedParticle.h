@@ -4,6 +4,7 @@
 #include "Engine/Spritesplitter.h"
 #include "Engine/Chunks.h"
 #include <vector>
+#include "BaseClasses/Base.h"
 
 enum ParticleShape {
     UNIFORM_EXPLOSION = 1,
@@ -29,7 +30,7 @@ struct Particle {
     Rectangle collider;
 };
 
-class PhysicsBasedParticle {
+class PhysicsBasedParticle : public Effect {
 public:
     PhysicsBasedParticle(
         const std::vector<Texture2D>* frames,   // <-- pointer to external textures
@@ -54,10 +55,10 @@ public:
         ChunkManager* chunk
     );
 
-    void Update(float dt);
-    void Draw();
+    void Update(double dt) override;
+    void Draw() override;
 
-    bool IsFinished() const { return dead; }
+    bool IsFinished() const override { return dead; }
 
 private:
     const std::vector<Texture2D>* textures;  // <-- NOT owned

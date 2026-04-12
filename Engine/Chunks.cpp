@@ -64,6 +64,9 @@ void Chunk::Draw() {
         }
     }
     else {
+        for (Grass* grassobj : grassobjs) {
+            grassobj->Draw();
+        }
         for (const auto& row : texData) {
             int localX = 0;
 
@@ -172,13 +175,6 @@ void ChunkManager::Update() {
 
 }
 
-void ChunkManager::Draw() {
-    for (Chunk* ch : activechunkobjs) {
-        for (Grass* grassobj : ch->grassobjs) {
-            grassobj->Draw();
-        }
-    }
-}
 
 void ChunkManager::OnSpecialEvent(string &command, vector<string> params) {
     if (command != "PLAYER_POS_UPDATE") return;

@@ -55,7 +55,7 @@ SlashEffect::SlashEffect(
 }
 
 
-void SlashEffect::Update(float dt) {
+void SlashEffect::Update(double dt) {
     if (particles.empty()) {
         dead = true;
         return;

@@ -119,3 +119,13 @@ public:
     virtual void Shutdown() override = 0;
     virtual void Startup() override = 0;
 };
+
+class Effect {
+public:
+    virtual ~Effect() = default;
+
+    virtual void Update(double dt) = 0;
+    virtual void Draw() = 0;
+
+    virtual bool IsFinished() const = 0;
+};

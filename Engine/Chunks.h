@@ -64,7 +64,7 @@ public:
     ChunkManager(DrawLayer& _bglayer, EventManager& _playerposmanager);
     ~ChunkManager();
 
-    void Draw() override;
+    void Draw() override {};
     void Update(); // calls the chunk updates (only active ones)
 
     int CheckTileCollision(const Vector2& worldPos); //tilepos is GLOBAL COORDS (finds chunk its in, then queries with chunk)

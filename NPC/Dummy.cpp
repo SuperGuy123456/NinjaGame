@@ -15,9 +15,6 @@ Dummy::Dummy(Vector2 pos, DrawLayer& _entitylayer, EventManager& _playerposmanag
 
     entitylayer.AddDrawCall(this, 0);
 
-    hayFrames = SpriteSplitter::SplitByHorizontal("../Art/Particles/Hay.png", 3, 0.8);
-    slashFrames = SpriteSplitter::SplitByHorizontal("../Art/Particles/WhiteSlash.png", 3, 0.8);
-
     allframes = SpriteSplitter::SplitByHorizontal("../Art/Test/FightDummy.png", 15, 1);
 
     Animation idle;
@@ -58,14 +55,6 @@ Dummy::~Dummy() {
         UnloadTexture(tex);
     }
 
-    // 3. Unload Particle Textures (These were leaked!)
-    for (Texture2D& tex : hayFrames) {
-        UnloadTexture(tex);
-    }
-    for (Texture2D& tex : slashFrames) {
-        UnloadTexture(tex);
-    }
-
     // 4. Global System Cleanup
     Collision::RemoveCollider(this);
     entitylayer.RemoveDrawCall(this);
@@ -75,13 +64,6 @@ Dummy::~Dummy() {
 }
 
 void Dummy::Draw() {
-    // Draw particle effects
-    for (auto& p : hayeffects)
-        p.Draw();
-    for (auto& s : slasheffects)
-        s.Draw();
-
-
     Texture2D* tex = animator.GetTexture();
     DrawTexture(*tex, pos.x, pos.y, WHITE);
 }
@@ -89,32 +71,6 @@ void Dummy::Draw() {
 
 void Dummy::Update(double& dt) {
     animator.ChangeAnimationState("IDLE");
-    // Update all particle effects
-    for (auto& p : hayeffects)
-        p.Update((float)dt);
-
-    for (auto& s : slasheffects)
-        s.Update(dt);
-
-
-    // Auto-remove finished effects
-    hayeffects.erase(
-        std::remove_if(hayeffects.begin(), hayeffects.end(),
-                       [](auto& p){ return p.IsFinished(); }),
-        hayeffects.end()
-    );
-
-    slasheffects.erase(
-    std::remove_if(slasheffects.begin(), slasheffects.end(),
-                   [](auto& s){ return s.IsFinished(); }),
-    slasheffects.end()
-
-    );
-    if (GetRandomValue(0, 100) == 5) {
-        hayeffects.shrink_to_fit();
-        slasheffects.shrink_to_fit();
-    }
-
     animator.Animate((float)dt);
 }
 
@@ -129,32 +85,13 @@ void Dummy::OnEvent(string &command) {
             if (obj.second->type == ATTACKBOX) {
                 //this means attack box overlapped with hurtbox when the player attacked
                 cout<<"HIT BY PLAYER"<<endl;
-                // Spawn hay burst
-                hayeffects.emplace_back(
-                &hayFrames,          // const std::vector<Texture2D>* frames
-                20,                  // particleCount
-                Vector2{pos.x + allframes[0].width/2, pos.y+ allframes[0].height/2},
-                Vector2{1, 0},
-                UNIFORM_EXPLOSION,
-                40.0f, 40.0f,
-                1.5f, 2.0f,
-                -6.0f, 6.0f,
-                1.0f,
-                30.0f,
-                0.98f,
-                &chunkmanager
-                );
-                slasheffects.emplace_back(
-                &slashFrames,
-                Vector2{pos.x + allframes[0].width/2, pos.y+ allframes[0].height/2},
-                60.0f,      // speed
-                1.0f,        // scale
-                0.1f,       // duration
-                SLASH_UNIFORM, 10
-                );
+
                 GameCamera::PulseZoom(1.1f, 1.0f);
                 GameCamera::TriggerShake(3.0f, 1.0f);
 
+
+                EffectsManager::SpawnPBPEffect(Vector2{pos.x + allframes[0].width/2, pos.y+ allframes[0].height/2});
+                EffectsManager::SpawnSlashEffect(Vector2{pos.x + allframes[0].width/2, pos.y+ allframes[0].height/2});
                 animator.ChangeAnimationState("HURT");
                 PlaySound(hit);
 

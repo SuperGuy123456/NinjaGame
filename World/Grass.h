@@ -7,14 +7,13 @@
 #include "Engine/DrawingPipeline.h"
 #include "screenres.h"
 #include "Engine/GameCamera.h"
+#include "raymath.h"
 class Player;
 
-struct Triangle {
-    Vector2 p1;
-    Vector2 p2;
-    Vector2 p3;
+struct Blade {
+    Vector2 base;
+    Vector2 tip;
 
-    Vector2 desired_angle; //used to change rotation
     Color color;
 };
 
@@ -27,23 +26,29 @@ public:
     void Update();
 private:
     Vector2& pos;
+    Player* player;
 
-    const int max_height = 8;
-    const int min_height = 4;
+    const int max_height = 6;
+    const int min_height = 3;
 
-    const int max_tipoffset = 4;
-    const int min_tipoffset = -4;
+    const int max_tipoffset = 2;
+    const int min_tipoffset = -2;
 
-    const int width = 2;
+    const int width = 1;
 
     const int spacing = 1;
 
-    const int count = 10;
+    const int count = 7;
 
     const float max_bend = 0.5f;
 
-    const Color basecolor = {75,105,47, 255};
+    const std::vector<Color> grassPalette = {
+        {117, 167, 67, 255},  // 1. Lighter Green (Highlights/Sun-kissed)
+        {75, 105, 47, 255},   // 2. Your Base Color (The Middle)
+        {52, 72, 32, 255},    // 3. Darker Green (Deep Grass)
+        {30, 45, 50, 255}     // 4. Cool Dark Green (Shadows/Deepest depth)
+    };
 
-    vector<Triangle> blades;
+    vector<Blade> blades;
 };
 #endif
