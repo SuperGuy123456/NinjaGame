@@ -45,9 +45,15 @@ def parse_tmx(path):
     for cy in range(chunks_y):
         for cx in range(chunks_x):
 
-            chunk = []
+            # 3 texture layers
+            bg_chunk  = [[-1 for _ in range(CHUNK_SIZE)] for _ in range(CHUNK_SIZE)]
+            main_chunk = []
+            fore_chunk = [[-1 for _ in range(CHUNK_SIZE)] for _ in range(CHUNK_SIZE)]
+
+            # collision layer
             col_chunk = []
 
+            # Fill main + collision from TMX
             for row in grid[cy*CHUNK_SIZE:(cy+1)*CHUNK_SIZE]:
                 tex_row = []
                 col_row = []
@@ -56,28 +62,41 @@ def parse_tmx(path):
                     engine_tid = tid - 1
 
                     if engine_tid == 15:  # grass tile
-                        tex_row.append(-1)  # do NOT draw
+                        tex_row.append(-1)
                         col_row.append(CATEGORY_ID["grass"])
                     else:
                         tex_row.append(engine_tid)
                         col_row.append(tile_to_collision.get(engine_tid, DEFAULT_COLLISION))
 
-                chunk.append(tex_row)
+                main_chunk.append(tex_row)
                 col_chunk.append(col_row)
 
-            # <-- FIX: append AFTER finishing the whole chunk
-            all_chunks.append((chunk, col_chunk))
+            # Append 4-block chunk
+            all_chunks.append((bg_chunk, main_chunk, fore_chunk, col_chunk))
 
     return all_chunks
 
 
 def write_chunks(chunks, out_path):
     with open(out_path, "w") as f:
-        for tex, col in chunks:
-            for row in tex:
+        for bg, main, fore, col in chunks:
+
+            # bg layer
+            for row in bg:
                 f.write(",".join(map(str, row)) + ",\n")
+
+            # main layer
+            for row in main:
+                f.write(",".join(map(str, row)) + ",\n")
+
+            # foreground layer
+            for row in fore:
+                f.write(",".join(map(str, row)) + ",\n")
+
+            # collision layer
             for row in col:
                 f.write(",".join(map(str, row)) + ",\n")
+
             f.write("\n")
 
 

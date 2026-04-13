@@ -1,6 +1,7 @@
 #pragma once
 #include "raylib.h"
 #include <iostream>
+#include "Engine/EventManager.h"
 class GameCamera {
 public:
     static void Init(Vector2* target);
@@ -11,8 +12,16 @@ public:
 
     static Camera2D GetCamera();
     static Vector2* target;
+    static bool usingFreeCam;
+    static bool loadAroundCam;
+    static bool chunkloadingState;
+    static float speed;
+
+    static float zoom;
+
 private:
     static Camera2D cam;
+    static Vector2 freeCamPos;
 
 
     // Shake
@@ -22,7 +31,6 @@ private:
 
     // Zoom pulse
     static float baseZoom;
-    static float zoom;
     static float zoomPulseTime;
     static float zoomPulseDuration;
     static float zoomStart;

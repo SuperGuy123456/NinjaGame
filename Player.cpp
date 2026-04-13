@@ -199,6 +199,13 @@ bool Player::IsSolid(float wx, float wy) {
 }
 
 void Player::Update(double& dt) {
+    if (GameCamera::usingFreeCam) {
+        xchange = 0;
+        velocity = {0,0};
+        isrunning = false;
+        return;
+    }
+
     bool wasGrounded = grounded;
 
     // ---------------------------------------------------------
@@ -373,6 +380,13 @@ void Player::Draw() {
 }
 
 void Player::OnEvent(string &command) {
+    if (GameCamera::usingFreeCam) {
+        xchange = 0;
+        velocity = {0,0};
+        isrunning = false;
+        return;
+    }
+
     if (command == "HOLD_W") {
         if (grounded) {
             velocity.y = jumpStrength;

@@ -15,6 +15,8 @@ struct SoundSource {
     int soundradius;
     float minvolume;
     float maxvolume;
+
+    std::string soundPath;
 };
 
 class SoundSystem {
@@ -23,9 +25,9 @@ public:
     static void AddSoundSource(SoundSource soundsource, string id);
     static void RemoveSoundSource(string id);
     static void Update();
+    static map<string, SoundSource> sources;
 private:
 
-    static map<string, SoundSource> sources;
     static map<float, Sound> bgsounds;
 };
 

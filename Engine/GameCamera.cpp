@@ -2,6 +2,8 @@
 #include "screenres.h"
 #include <cmath>
 
+#include "ReferencePool.h"
+
 // Static definitions
 Camera2D GameCamera::cam = {0};
 Vector2 *GameCamera::target = nullptr;
@@ -16,6 +18,12 @@ float GameCamera::zoomPulseTime = 0.0f;
 float GameCamera::zoomPulseDuration = 0.0f;
 float GameCamera::zoomStart = 1.0f;
 float GameCamera::zoomEnd = 1.0f;
+
+bool GameCamera::usingFreeCam = false;
+bool GameCamera::loadAroundCam = false;
+bool GameCamera::chunkloadingState = true;
+Vector2 GameCamera::freeCamPos = {0, 0};
+float GameCamera::speed = 300;
 
 void GameCamera::Init(Vector2 *t) {
     target = t;
@@ -41,6 +49,27 @@ void GameCamera::PulseZoom(float amount, float duration) {
 }
 
 void GameCamera::Update(float dt) {
+    if (usingFreeCam) {
+        float speed = GameCamera::speed * dt;
+        if (IsKeyDown(KEY_LEFT_SHIFT)) speed *= 2;
+
+        if (IsKeyDown(KEY_W)) freeCamPos.y -= speed;
+        if (IsKeyDown(KEY_S)) freeCamPos.y += speed;
+        if (IsKeyDown(KEY_A)) freeCamPos.x -= speed;
+        if (IsKeyDown(KEY_D)) freeCamPos.x += speed;
+
+        cam.target = freeCamPos;
+        cam.zoom = zoom;
+        if (loadAroundCam) {
+            EventManager* playerposmanager = (EventManager*)ReferencePool::Get("PLAYERPOSMANAGER REF");
+            playerposmanager->BroadcastSpecialMessage("PLAYER_POS_UPDATE " + to_string(freeCamPos.x) + " " + to_string(freeCamPos.y));
+        }
+        return; // skip player follow
+    }
+    else {
+        freeCamPos = cam.target;
+    }
+
     // ---------------------------
     // Smooth follow
     // ---------------------------

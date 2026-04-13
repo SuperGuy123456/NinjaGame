@@ -91,7 +91,6 @@ void EffectsManager::Draw() {
     for (Effect* effect : currentEffects) {
         effect->Draw();
     }
-    std::cout << "Drawing " << currentEffects.size() << " effects" << std::endl;
 }
 
 void EffectsManager::Update() {

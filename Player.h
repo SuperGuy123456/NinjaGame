@@ -12,6 +12,7 @@
 #include "screenres.h"
 
 using namespace std;
+class ChunkManager;
 
 class Player : public Load, public Listener, public HasCollider
 {

@@ -16,6 +16,9 @@
 #include "Engine/ReferencePool.h"
 #include "Effects/EffectsManager.h"
 #include "Engine/SoundSystem.h"
+#include "imgui.h"
+#include "rlImGui.h"
+#include "LevelEditor.h"
 
 using namespace std;
 
@@ -84,6 +87,10 @@ int main() {
 
     std::cout << "[BOOT] SetTargetFPS...\n";
     SetTargetFPS(60);
+    rlImGuiSetup(true);
+
+    bool showImGuiDemo = false;
+    bool showDebugWindow = true;
 
     EffectsManager::Init();
     Sound bgsound = LoadSound("../Audio/Environmental Music/bgmusic.ogg");
@@ -139,67 +146,67 @@ int main() {
 
     Dummy dummy({19, 73}, entitylayer, playerposmanager, chunkmanager);
 
+    LevelEditor editor(&chunkmanager);
+    editor.enabled = false;
+
     // ---------------- Main Loop ----------------
     // --- Main Loop ---
     while (!WindowShouldClose()) {
         dt = GetFrameTime();
 
-        // 1. UPDATE
+        // UPDATE
+        if (IsKeyPressed(KEY_F1))
+            editor.enabled = !editor.enabled;
+
+        if (editor.enabled)
+            editor.Update(dt);
+
         inputmanager.GetInput();
         player.Update(dt);
         chunkmanager.Update();
         dummy.Update(dt);
         GameCamera::Update(dt);
         EffectsManager::Update();
-
-        // Don't forget to update the system to actually process the audio
         SoundSystem::Update();
 
-        // 2. DRAW TO VIRTUAL CANVAS (151x91)
+        // DRAW GAME WORLD
         BeginTextureMode(worldCanvas);
-        // Force Alpha to 255 (Opaque)
         ClearBackground(Color{135, 206, 235, 255});
         BeginMode2D(GameCamera::GetCamera());
-        //DrawRectangle(0,0,virtualWidth, virtualHeight, Color{255,255,255,255});
         chunkmanager.Draw();
         pipeline.DrawAll();
         EffectsManager::Draw();
+        if (editor.enabled and editor.showGizmos){editor.DrawWorldGizmos();}
         EndMode2D();
         EndTextureMode();
 
-        // 3. DRAW TO ACTUAL SCREEN
+        // DRAW TO SCREEN
         BeginDrawing();
-        // Now you can safely use BLACK, it won't hide the game
         ClearBackground(BLACK);
 
-        // SOURCE: Use a negative height to flip the texture right-side up
-        Rectangle src = {
-            0,
-            0,
-            (float)worldCanvas.texture.width,
-            -(float)worldCanvas.texture.height
-        };
+        Rectangle src = {0, 0, (float)worldCanvas.texture.width, -(float)worldCanvas.texture.height};
+        Rectangle dest = {0, 0, (float)GetScreenWidth(), (float)GetScreenHeight()};
+        DrawTexturePro(worldCanvas.texture, src, dest, {0,0}, 0.0f, WHITE);
 
-        // DESTINATION: Use GetScreenWidth/Height to ensure it fills the window perfectly
-        // This handles Retina/High-DPI scaling automatically
-        Rectangle dest = {
-            0,
-            0,
-            (float)GetScreenWidth(),
-            (float)GetScreenHeight()
-        };
-
-        // Origin {0,0} means we anchor to the top-left
-        Vector2 origin = { 0, 0 };
-
-        // Point filtering is already set, so this will be crisp
-        DrawTexturePro(worldCanvas.texture, src, dest, origin, 0.0f, WHITE);
-        // 4. HIGH-RES UI
         DrawFPS(10, 10);
         PrintMemoryStats();
+
+        // --- IMGUI START ---
+
+
+        if (editor.enabled)
+            editor.DrawGUI();
+
+
+        // --- IMGUI END ---
+
         EndDrawing();
     }
 
+
+
+
+    rlImGuiShutdown();
     UnloadRenderTexture(worldCanvas); // Clean up
     EffectsManager::DeInit();
     std::cout << "[BOOT] Exiting cleanly.\n";

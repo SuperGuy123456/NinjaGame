@@ -1,10 +1,21 @@
 #include "Chunks.h"
-
-Chunk::Chunk(int cx, int cy, const vector<vector<int> > &tex, const vector<vector<int> > &col, const vector<Texture2D>& _tiletexs, DrawLayer& _bglayer) : texData(tex), colData(col), tiletexs(_tiletexs), bglayer(_bglayer) {
+Chunk::Chunk(int cx, int cy,const vector<vector<int>>& _bgtexdata, const vector<vector<int> >& _maintexdata, const vector<vector<int>>& _foretexdata, const vector<vector<int> > &col, const vector<Texture2D>& _tiletexs, DrawLayer& _bglayer) : bgtexdata(_bgtexdata), maintexdata(_maintexdata), foretexdata(_foretexdata), colData(col), tiletexs(_tiletexs), bglayer(_bglayer) {
     x = cx;
     y = cy;
 
-    //make all of the boxes (one time thing)
+    BuildColliders();
+
+}
+
+Chunk::~Chunk(){}; //no need to unload textures as they are part of chunkmanager
+
+void Chunk::BuildColliders() {
+    // CLEAR OLD COLLIDERS FIRST
+    Collision::RemoveCollider(this);
+    hitboxes.clear();
+    grasstileposes.clear();
+    grassobjs.clear();
+    //make all of the boxes
     int localY = 0;
     for (const auto& row : colData) {
         int localX = 0;
@@ -24,20 +35,49 @@ Chunk::Chunk(int cx, int cy, const vector<vector<int> > &tex, const vector<vecto
                 //grass detected (spawn some grass)
                 grasstileposes.push_back({(float)x * TILESIZE * PIXELSCALE * TILESPERCHUNK + localX * TILESIZE * PIXELSCALE,
                     (float)y * TILESIZE * PIXELSCALE * TILESPERCHUNK + localY * TILESIZE * PIXELSCALE});
+                grassobjs.push_back(new Grass(grasstileposes.back()));
             }
             localX++;
         }
         localY++;
     }
-
+    Collision::AddCollider(this);
 }
 
-Chunk::~Chunk(){}; //no need to unload textures as they are part of chunkmanager
+void Chunk::SpawnGrassAt(int lx, int ly)
+{
+    float wx = (x * TILESPERCHUNK + lx) * TILESIZE * PIXELSCALE;
+    float wy = (y * TILESPERCHUNK + ly) * TILESIZE * PIXELSCALE;
+
+    Vector2 pos = { wx, wy };
+
+    grasstileposes.push_back(pos);
+    grassobjs.push_back(new Grass(grasstileposes.back()));
+}
+
 
 void Chunk::Update() {
     //TODO for everything inside the chunk
     for (Grass* grassobj : grassobjs) {
         grassobj->Update();
+    }
+}
+void Chunk::DrawTexLayer(const std::vector<std::vector<int>>& layer) {
+    int localY = 0;
+    for (const auto& row : layer) {
+        int localX = 0;
+        for (int id : row) {
+            if (id >= 0) { // skip empty
+                DrawTexture(
+                    tiletexs[id],
+                    x * TILESIZE * PIXELSCALE * TILESPERCHUNK + localX * TILESIZE * PIXELSCALE,
+                    y * TILESIZE * PIXELSCALE * TILESPERCHUNK + localY * TILESIZE * PIXELSCALE,
+                    WHITE
+                );
+            }
+            localX++;
+        }
+        localY++;
     }
 }
 
@@ -67,22 +107,9 @@ void Chunk::Draw() {
         for (Grass* grassobj : grassobjs) {
             grassobj->Draw();
         }
-        for (const auto& row : texData) {
-            int localX = 0;
-
-            for (int id : row) {
-
-                    DrawTexture(
-                tiletexs[id],
-                x * TILESIZE*PIXELSCALE*TILESPERCHUNK  + (localX * TILESIZE * PIXELSCALE),
-                y * TILESIZE*PIXELSCALE*TILESPERCHUNK + (localY * TILESIZE * PIXELSCALE),
-                WHITE
-            );
-
-                localX++;
-            }
-            localY++;
-        }
+        DrawTexLayer(bgtexdata);
+        DrawTexLayer(maintexdata);
+        DrawTexLayer(foretexdata);
     }
 
     /*DrawRectangleLines(
@@ -141,7 +168,9 @@ ChunkManager::ChunkManager(DrawLayer& _bglayer, EventManager& _playerposmanager)
     std::cout << "[CHUNK] Resizing coordchunks to " << chunksX << "x" << chunksY << "...\n";
 
     coordchunks.resize(chunksX, std::vector<Chunk*>(chunksY, nullptr));
-    texdata.resize(chunksX, std::vector<std::vector<std::vector<int>>>(chunksY));
+    bgtexdata.resize(chunksX, std::vector<std::vector<std::vector<int>>>(chunksY));
+    maintexdata.resize(chunksX, std::vector<std::vector<std::vector<int>>>(chunksY));
+    foretexdata.resize(chunksX, std::vector<std::vector<std::vector<int>>>(chunksY));
     coldata.resize(chunksX, std::vector<std::vector<std::vector<int>>>(chunksY));
 
     std::cout << "[CHUNK] Calling ParseData()...\n";
@@ -174,6 +203,11 @@ void ChunkManager::Update() {
     }
 
 }
+inline void WorldToTile(const Vector2& worldPos, int& outTileX, int& outTileY)
+{
+    outTileX = (int)floor(worldPos.x / (TILESIZE * PIXELSCALE));
+    outTileY = (int)floor(worldPos.y / (TILESIZE * PIXELSCALE));
+}
 
 
 void ChunkManager::OnSpecialEvent(string &command, vector<string> params) {
@@ -186,26 +220,32 @@ void ChunkManager::OnSpecialEvent(string &command, vector<string> params) {
     int cy = playery / CHUNK_SIZE;
 
 
+    if (GameCamera::chunkloadingState) {
+        prevactivechunkobjs = activechunkobjs;
+        activechunkobjs.clear();
 
-    prevactivechunkobjs = activechunkobjs;
-    activechunkobjs.clear();
+        // Activate 3x3 around player
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
 
-    // Activate 3x3 around player
-    for (int dy = -1; dy <= 1; dy++) {
-        for (int dx = -1; dx <= 1; dx++) {
+                int ncx = cx + dx;
+                int ncy = cy + dy;
 
-            int ncx = cx + dx;
-            int ncy = cy + dy;
+                // Bounds check
+                if (ncx < 0 || ncy < 0) continue;
+                if (ncx >= coordchunks.size()) continue;
+                if (ncy >= coordchunks[0].size()) continue;
 
-            // Bounds check
-            if (ncx < 0 || ncy < 0) continue;
-            if (ncx >= coordchunks.size()) continue;
-            if (ncy >= coordchunks[0].size()) continue;
-
-            Chunk* ch = coordchunks[ncx][ncy];
-            activechunkobjs.push_back(ch);
+                Chunk* ch = coordchunks[ncx][ncy];
+                activechunkobjs.push_back(ch);
+            }
         }
     }
+    else {
+        prevactivechunkobjs = activechunkobjs;
+        activechunkobjs = allchunkobjs;
+    }
+
 
     // Startup new chunks
     for (Chunk* ch : activechunkobjs) {
@@ -240,54 +280,62 @@ void ChunkManager::ParseData() {
     std::vector<std::string> lines;
     std::string line;
 
-    // Read all non-empty lines
     while (std::getline(file, line)) {
         if (!line.empty())
             lines.push_back(line);
     }
-
     file.close();
 
-    // ---------------------------------------------------------
-    // Compute total chunks from file
-    // ---------------------------------------------------------
-    int linesPerChunk = TILESPERCHUNK * 2;   // 20 tex + 20 col = 40
+    // 4 blocks × TILESPERCHUNK lines each
+    int linesPerChunk = TILESPERCHUNK * 4;   // 40 lines
     int totalChunks = lines.size() / linesPerChunk;
 
     std::cout << "File contains " << totalChunks << " chunks\n";
 
-    // ---------------------------------------------------------
-    // Use your existing hardcoded grid (50 x 2)
-    // ---------------------------------------------------------
-    int chunksX = coordchunks.size();        // 50
-    int chunksY = coordchunks[0].size();     // 2
+    int chunksX = coordchunks.size();
+    int chunksY = coordchunks[0].size();
 
-    // Safety check
     if (totalChunks > chunksX * chunksY) {
-        std::cout << "ERROR: File contains MORE chunks (" << totalChunks
-                  << ") than grid can hold (" << chunksX * chunksY << ")!\n";
+        std::cout << "ERROR: File contains MORE chunks than grid!\n";
         return;
     }
 
-    // ---------------------------------------------------------
-    // Parse each chunk
-    // ---------------------------------------------------------
     int lineIndex = 0;
     int chunkIndex = 0;
 
     while (chunkIndex < totalChunks) {
 
-        // --- Parse texture rows ---
-        std::vector<std::vector<int>> tex(TILESPERCHUNK, std::vector<int>(TILESPERCHUNK));
+        // --- Parse BG layer ---
+        std::vector<std::vector<int>> bg(TILESPERCHUNK, std::vector<int>(TILESPERCHUNK));
         for (int r = 0; r < TILESPERCHUNK; r++) {
             std::stringstream ss(lines[lineIndex++]);
             for (int c = 0; c < TILESPERCHUNK; c++) {
-                ss >> tex[r][c];
+                ss >> bg[r][c];
                 ss.ignore(1);
             }
         }
 
-        // --- Parse collision rows ---
+        // --- Parse MAIN layer ---
+        std::vector<std::vector<int>> main(TILESPERCHUNK, std::vector<int>(TILESPERCHUNK));
+        for (int r = 0; r < TILESPERCHUNK; r++) {
+            std::stringstream ss(lines[lineIndex++]);
+            for (int c = 0; c < TILESPERCHUNK; c++) {
+                ss >> main[r][c];
+                ss.ignore(1);
+            }
+        }
+
+        // --- Parse FORE layer ---
+        std::vector<std::vector<int>> fore(TILESPERCHUNK, std::vector<int>(TILESPERCHUNK));
+        for (int r = 0; r < TILESPERCHUNK; r++) {
+            std::stringstream ss(lines[lineIndex++]);
+            for (int c = 0; c < TILESPERCHUNK; c++) {
+                ss >> fore[r][c];
+                ss.ignore(1);
+            }
+        }
+
+        // --- Parse COLLISION layer ---
         std::vector<std::vector<int>> col(TILESPERCHUNK, std::vector<int>(TILESPERCHUNK));
         for (int r = 0; r < TILESPERCHUNK; r++) {
             std::stringstream ss(lines[lineIndex++]);
@@ -301,28 +349,25 @@ void ChunkManager::ParseData() {
         int cx = chunkIndex % chunksX;
         int cy = chunkIndex / chunksX;
 
-        std::cout << "PARSE: chunkIndex=" << chunkIndex
-                  << " -> cx=" << cx
-                  << " cy=" << cy << "\n";
-
-        texdata[cx][cy] = tex;
-        coldata[cx][cy] = col;
+        bgtexdata[cx][cy]   = bg;
+        maintexdata[cx][cy] = main;
+        foretexdata[cx][cy] = fore;
+        coldata[cx][cy]     = col;
 
         chunkIndex++;
     }
 
-    // ---------------------------------------------------------
-    // Construct chunk objects
-    // ---------------------------------------------------------
+    // Build chunk objects
     for (int cy = 0; cy < chunksY; cy++) {
         for (int cx = 0; cx < chunksX; cx++) {
-            // Only build chunks that exist in file
             if (cx + cy * chunksX >= totalChunks)
                 continue;
 
             Chunk* ch = new Chunk(
                 cx, cy,
-                texdata[cx][cy],
+                bgtexdata[cx][cy],
+                maintexdata[cx][cy],
+                foretexdata[cx][cy],
                 coldata[cx][cy],
                 tiletexs,
                 bglayer
@@ -333,8 +378,46 @@ void ChunkManager::ParseData() {
         }
     }
 
+    // ------------------------------------------------------
+    // Parse SOUNDS block
+    // ------------------------------------------------------
+    if (lineIndex < lines.size() && lines[lineIndex] == "SOUNDS") {
+        lineIndex++; // move past the SOUNDS header
+
+        while (lineIndex < lines.size()) {
+            std::string& sline = lines[lineIndex];
+            lineIndex++;
+
+            if (sline.empty()) continue;
+
+            std::stringstream ss(sline);
+
+            std::string id;
+            float x, y;
+            int radius;
+            float minv, maxv;
+            std::string path;
+
+            ss >> id >> x >> y >> radius >> minv >> maxv >> path;
+
+            SoundSource src;
+            src.pos = {x, y};
+            src.soundradius = radius;
+            src.minvolume = minv;
+            src.maxvolume = maxv;
+            src.soundPath = path;
+            src.sound = LoadSound(path.c_str());
+
+            SoundSystem::AddSoundSource(src, id);
+        }
+
+        std::cout << "Loaded all sound emitters.\n";
+    }
+
+
     std::cout << "ChunkManager: Level data loaded successfully.\n";
 }
+
 
 int ChunkManager::CheckTileCollision(const Vector2& worldPos)
 {
@@ -373,3 +456,233 @@ int ChunkManager::CheckTileCollision(const Vector2& worldPos)
     return result;
 }
 
+void ChunkManager::ModifyTexData(const Vector2& worldPos, int layer, int tileID)
+{
+    int tileX, tileY;
+    WorldToTile(worldPos, tileX, tileY);
+
+    int cx = tileX / TILESPERCHUNK;
+    int cy = tileY / TILESPERCHUNK;
+
+    if (cx < 0 || cy < 0) return;
+    if (cx >= (int)coordchunks.size()) return;
+    if (cy >= (int)coordchunks[0].size()) return;
+
+    Chunk* ch = coordchunks[cx][cy];
+    if (!ch) return;
+
+    // Only modify if chunk is active
+    if (std::find(activechunkobjs.begin(), activechunkobjs.end(), ch) == activechunkobjs.end())
+        return;
+
+    int lx = tileX % TILESPERCHUNK;
+    int ly = tileY % TILESPERCHUNK;
+    if (lx < 0) lx += TILESPERCHUNK;
+    if (ly < 0) ly += TILESPERCHUNK;
+
+    switch (layer) {
+        case 0: bgtexdata[cx][cy][ly][lx]   = tileID; break;
+        case 1: maintexdata[cx][cy][ly][lx] = tileID; break;
+        case 2: foretexdata[cx][cy][ly][lx] = tileID; break;
+    }
+}
+
+
+void ChunkManager::ModifyCollData(const Vector2& worldPos, int collID)
+{
+    int tileX, tileY;
+    WorldToTile(worldPos, tileX, tileY);
+
+    int cx = tileX / TILESPERCHUNK;
+    int cy = tileY / TILESPERCHUNK;
+
+    if (cx < 0 || cy < 0) return;
+    if (cx >= (int)coordchunks.size()) return;
+    if (cy >= (int)coordchunks[0].size()) return;
+
+    Chunk* ch = coordchunks[cx][cy];
+    if (!ch) return;
+
+    // Only modify if chunk is active
+    if (std::find(activechunkobjs.begin(), activechunkobjs.end(), ch) == activechunkobjs.end())
+        return;
+
+    int lx = tileX % TILESPERCHUNK;
+    int ly = tileY % TILESPERCHUNK;
+    if (lx < 0) lx += TILESPERCHUNK;
+    if (ly < 0) ly += TILESPERCHUNK;
+
+    coldata[cx][cy][ly][lx] = collID;
+
+    // Rebuild ONLY the chunk's internal hitboxes, not global collision lists
+    ch->BuildColliders();
+}
+
+int ChunkManager::CheckTileId(const Vector2& worldPos, int layer)
+{
+    // Convert world → tile
+    int tileX, tileY;
+    WorldToTile(worldPos, tileX, tileY);
+
+    // Convert tile → chunk
+    int cx = tileX / TILESPERCHUNK;
+    int cy = tileY / TILESPERCHUNK;
+
+    if (cx < 0 || cy < 0) return -1;
+    if (cx >= coordchunks.size()) return -1;
+    if (cy >= coordchunks[0].size()) return -1;
+
+    // Local tile inside chunk
+    int lx = tileX % TILESPERCHUNK;
+    int ly = tileY % TILESPERCHUNK;
+    if (lx < 0) lx += TILESPERCHUNK;
+    if (ly < 0) ly += TILESPERCHUNK;
+
+    // Read from correct layer
+    switch (layer) {
+        case 0: return bgtexdata[cx][cy][ly][lx];
+        case 1: return maintexdata[cx][cy][ly][lx];
+        case 2: return foretexdata[cx][cy][ly][lx];
+    }
+
+    return -1;
+}
+void ChunkManager::WorldToTile(const Vector2& worldPos, int& tileX, int& tileY)
+{
+    // Your world uses 8×8 tiles scaled by 10 → logical tile size = 8
+    tileX = (int)floor(worldPos.x / 8.0f);
+    tileY = (int)floor(worldPos.y / 8.0f);
+}
+
+bool ChunkManager::ValidChunk(int cx, int cy) const {
+    if (cx < 0 || cy < 0) return false;
+    if (cx >= coordchunks.size()) return false;
+    if (cy >= coordchunks[0].size()) return false;
+    return true;
+}
+
+void ChunkManager::SpawnGrassAtWorld(const Vector2& worldPos)
+{
+    int tileX, tileY;
+    WorldToTile(worldPos, tileX, tileY);
+
+    int cx = tileX / TILESPERCHUNK;
+    int cy = tileY / TILESPERCHUNK;
+
+    if (!ValidChunk(cx, cy))
+        return;
+
+    int lx = tileX % TILESPERCHUNK;
+    int ly = tileY % TILESPERCHUNK;
+    if (lx < 0) lx += TILESPERCHUNK;
+    if (ly < 0) ly += TILESPERCHUNK;
+
+    coordchunks[cx][cy]->SpawnGrassAt(lx, ly);
+}
+
+bool ChunkManager::TileTouchesAir(const Vector2& worldPos, int layer)
+{
+    int tileX, tileY;
+    WorldToTile(worldPos, tileX, tileY);
+
+    int cx = tileX / TILESPERCHUNK;
+    int cy = tileY / TILESPERCHUNK;
+
+    int lx = tileX % TILESPERCHUNK;
+    int ly = tileY % TILESPERCHUNK;
+    if (lx < 0) lx += TILESPERCHUNK;
+    if (ly < 0) ly += TILESPERCHUNK;
+
+    const int dirs[4][2] = {
+        {0,-1}, {0,1}, {-1,0}, {1,0}
+    };
+
+    for (auto& d : dirs) {
+        int nx = lx + d[0];
+        int ny = ly + d[1];
+
+        int ncx = cx;
+        int ncy = cy;
+
+        if (nx < 0) { nx += TILESPERCHUNK; ncx--; }
+        if (ny < 0) { ny += TILESPERCHUNK; ncy--; }
+        if (nx >= TILESPERCHUNK) { nx -= TILESPERCHUNK; ncx++; }
+        if (ny >= TILESPERCHUNK) { ny -= TILESPERCHUNK; ncy++; }
+
+        if (!ValidChunk(ncx, ncy))
+            return true;
+
+        Vector2 wp = {
+            (float)(ncx * TILESPERCHUNK + nx) * TILESIZE * PIXELSCALE,
+            (float)(ncy * TILESPERCHUNK + ny) * TILESIZE * PIXELSCALE
+        };
+
+        int id = CheckTileId(wp, layer);
+        if (id == -1)
+            return true;
+    }
+
+    return false;
+}
+void ChunkManager::SaveLevel() {
+    std::ofstream f("../Levels/Level1_parsed.txt");
+    if (!f.is_open()) {
+        std::cout << "ERROR: Could not save level.\n";
+        return;
+    }
+
+    // We must iterate in the exact same order ParseData expects
+    // Based on your ParseData, it seems to expect 4 layers per chunk.
+    for (int cy = 0; cy < coordchunks[0].size(); cy++) {
+        for (int cx = 0; cx < coordchunks.size(); cx++) {
+
+            // 1. BG LAYER (Must write 20 lines)
+            for (int r = 0; r < TILESPERCHUNK; r++) {
+                for (int c = 0; c < TILESPERCHUNK; c++) {
+                    f << bgtexdata[cx][cy][r][c] << (c < TILESPERCHUNK - 1 ? "," : "");
+                }
+                f << "\n";
+            }
+
+            // 2. MAIN LAYER (Must write 20 lines)
+            for (int r = 0; r < TILESPERCHUNK; r++) {
+                for (int c = 0; c < TILESPERCHUNK; c++) {
+                    f << maintexdata[cx][cy][r][c] << (c < TILESPERCHUNK - 1 ? "," : "");
+                }
+                f << "\n";
+            }
+
+            // 3. FORE LAYER (Must write 20 lines)
+            for (int r = 0; r < TILESPERCHUNK; r++) {
+                for (int c = 0; c < TILESPERCHUNK; c++) {
+                    f << foretexdata[cx][cy][r][c] << (c < TILESPERCHUNK - 1 ? "," : "");
+                }
+                f << "\n";
+            }
+
+            // 4. COLLISION LAYER (Must write 20 lines)
+            for (int r = 0; r < TILESPERCHUNK; r++) {
+                for (int c = 0; c < TILESPERCHUNK; c++) {
+                    f << coldata[cx][cy][r][c] << (c < TILESPERCHUNK - 1 ? "," : "");
+                }
+                f << "\n";
+            }
+        }
+    }
+
+    // Sound emitters section (Make sure ParseData handles this line!)
+    f << "SOUNDS\n";
+
+    for (auto& [id, src] : SoundSystem::sources) {
+        f << id << " "
+          << src.pos.x << " "
+          << src.pos.y << " "
+          << src.soundradius << " "
+          << src.minvolume << " "
+          << src.maxvolume << " "
+          << src.soundPath << "\n";
+    }
+
+    f.close();
+    std::cout << "Level saved successfully with all layers." << std::endl;
+}
