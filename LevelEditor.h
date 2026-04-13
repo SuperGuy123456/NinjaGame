@@ -49,6 +49,8 @@ private:
     void UpdateCollisionNeighbors(int cx, int cy, int lx, int ly);
     void SelectSoundAt(Vector2 worldPos);
 
+    bool unSaved = false;
+
     vector<Texture2D> alltiles;
     string selectedSoundID;
 

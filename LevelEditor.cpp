@@ -206,6 +206,7 @@ void LevelEditor::SelectSoundAt(Vector2 worldPos) {
 
 
 void LevelEditor::ApplyToolAt(Vector2 worldPos) {
+    unSaved = true;
     int tileX, tileY;
     chunkManager->WorldToTile(worldPos, tileX, tileY);
 
@@ -287,7 +288,7 @@ void LevelEditor::DrawGUI() {
     rlImGuiBegin();
 
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2((float)GetScreenWidth(), 40), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2((float)GetScreenWidth(), 60), ImGuiCond_Always);
     ImGui::Begin("Tools", nullptr,
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoResize |
@@ -334,7 +335,22 @@ void LevelEditor::DrawGUI() {
     }
     if (ImGui::Button("SAVE LVL")) {
         chunkManager->SaveLevel();
+        unSaved = false;
     }
+
+    if (unSaved) {
+        ImGui::SameLine(0, 5.0f); // 5px spacing
+        // Get the cursor position to draw the dot
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        pos.y += ImGui::GetFontSize() * 0.5f; // Center it vertically to the text
+
+        // Draw a small orange/red dot
+        ImGui::GetWindowDrawList()->AddCircleFilled(pos, 4.0f, IM_COL32(255, 165, 0, 255));
+
+        // Advance the dummy cursor so the next item doesn't overlap the dot
+        ImGui::Dummy(ImVec2(8.0f, 0.0f));
+    }
+
     ImGui::End();
 
     float rightW = 320;

@@ -309,12 +309,15 @@ void Player::Update(double& dt) {
 }
 
 void Player::ResolveCollisions(double dt) {
+    // A tiny epsilon to prevent "micro-stuck" states
+    const float skin = 0.01f;
+
     // --- STEP 1: HORIZONTAL MOVEMENT ---
     pos.x += velocity.x * dt;
 
-    // Update ALL hitboxes immediately after movement
+    // Update hitboxes for X check
     hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
-    // This places the attackbox in front of the player based on facing (1 or -1)
+    // Attack box sync
     if (facing == 1) hitboxes[1].rect.x = pos.x;
     else hitboxes[1].rect.x = pos.x - ridgidbox_width * 1.5f;
 
@@ -324,12 +327,22 @@ void Player::ResolveCollisions(double dt) {
         if (hbB->type != RIDGIDBOX) continue;
 
         Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB->rect);
-        if (hitboxes[0].rect.x < hbB->rect.x) pos.x -= overlap.width;
-        else pos.x += overlap.width;
 
+        // Use center-comparison to decide which way to push
+        float playerCenterX = hitboxes[0].rect.x + hitboxes[0].rect.width / 2.0f;
+        float blockCenterX = hbB->rect.x + hbB->rect.width / 2.0f;
+
+        if (playerCenterX < blockCenterX) {
+            pos.x -= (overlap.width + skin);
+        } else {
+            pos.x += (overlap.width + skin);
+        }
+
+        // Only kill velocity if we are actually moving into the wall
+        // This allows physics forces from other sources to keep working
         velocity.x = 0;
 
-        // RE-SYNC ALL after resolution
+        // Sync for subsequent checks
         hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
         if (facing == 1) hitboxes[1].rect.x = pos.x;
         else hitboxes[1].rect.x = pos.x - ridgidbox_width * 1.5f;
@@ -339,7 +352,6 @@ void Player::ResolveCollisions(double dt) {
     grounded = false;
     pos.y += velocity.y * dt;
 
-    // Update ALL hitboxes immediately
     hitboxes[0].rect.y = pos.y - ridgidbox_height;
     hitboxes[1].rect.y = pos.y - ridgidbox_height;
 
@@ -349,17 +361,23 @@ void Player::ResolveCollisions(double dt) {
         if (hbB->type != RIDGIDBOX) continue;
 
         Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB->rect);
-        if (velocity.y >= 0 && (hitboxes[0].rect.y + hitboxes[0].rect.height) <= (hbB->rect.y + overlap.height + 1.0f)) {
-            pos.y -= overlap.height;
-            grounded = true;
-            velocity.y = 0;
+
+        // Check if we are landing (falling down)
+        if (velocity.y > 0) {
+            // Ensure we only snap to top if we were actually above the tile
+            if (hitboxes[0].rect.y + hitboxes[0].rect.height <= hbB->rect.y + overlap.height + skin + 1.0f) {
+                pos.y -= (overlap.height + skin);
+                grounded = true;
+                velocity.y = 0;
+            }
         }
+        // Check if we hit a ceiling (jumping up)
         else if (velocity.y < 0) {
-            pos.y += overlap.height;
+            pos.y += (overlap.height + skin);
             velocity.y = 0;
         }
 
-        // RE-SYNC ALL after resolution
+        // Final Sync
         hitboxes[0].rect.y = pos.y - ridgidbox_height;
         hitboxes[1].rect.y = pos.y - ridgidbox_height;
     }
