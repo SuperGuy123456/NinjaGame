@@ -306,96 +306,142 @@ void Player::Update(double& dt) {
     playerposmanager.BroadcastSpecialMessage(
         "PLAYER_POS_UPDATE " + to_string(pos.x) + " " + to_string(pos.y)
     );
+    //cout<<grounded<<endl;
 }
 
-void Player::ResolveCollisions(double dt) {
-    // A tiny epsilon to prevent "micro-stuck" states
-    const float skin = 0.01f;
+void Player::ResolveCollisions(double dt)
+{
+    // --- PREP ---
+    float startX = pos.x;
+    float startY = pos.y;
 
-    // --- STEP 1: HORIZONTAL MOVEMENT ---
-    pos.x += velocity.x * dt;
+    // Intent MUST be per-frame movement
+    int XIntent = (int)round(velocity.x * dt);
+    int YIntent = (int)round(velocity.y * dt);
 
-    // Update hitboxes for X check
-    hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
-    // Attack box sync
-    if (facing == 1) hitboxes[1].rect.x = pos.x;
-    else hitboxes[1].rect.x = pos.x - ridgidbox_width * 1.5f;
+    int ResolvedX = 0;
+    int ResolvedY = 0;
 
-    vector<CollisionResult> xCollisions = Collision::CheckCollision(this);
-    for (auto& res : xCollisions) {
-        Hitbox* hbB = res.second;
-        if (hbB->type != RIDGIDBOX) continue;
+    // ============================================================
+    //  HORIZONTAL SWEEP (fixed loop)
+    // ============================================================
 
-        Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB->rect);
+    if (XIntent != 0)
+    {
+        int dir = (XIntent > 0) ? 1 : -1;
+        bool blocked = false;
 
-        // Use center-comparison to decide which way to push
-        float playerCenterX = hitboxes[0].rect.x + hitboxes[0].rect.width / 2.0f;
-        float blockCenterX = hbB->rect.x + hbB->rect.width / 2.0f;
+        // FIXED LOOP: test every pixel INCLUDING the final one
+        for (int i = dir; i != XIntent + dir; i += dir)
+        {
+            float testX = startX + i;
 
-        if (playerCenterX < blockCenterX) {
-            pos.x -= (overlap.width + skin);
-        } else {
-            pos.x += (overlap.width + skin);
+            // Sync hitbox to TEST POSITION
+            hitboxes[0].rect.x = testX - ridgidbox_width / 2.0f;
+            hitboxes[0].rect.y = startY - ridgidbox_height;
+
+            auto results = Collision::CheckCollision(this);
+
+            for (auto& r : results)
+            {
+                if (r.second->type == RIDGIDBOX)
+                {
+                    blocked = true;
+                    break;
+                }
+            }
+
+            if (blocked)
+                break;
+
+            ResolvedX = i; // last safe offset
         }
 
-        // Only kill velocity if we are actually moving into the wall
-        // This allows physics forces from other sources to keep working
-        velocity.x = 0;
-
-        // Sync for subsequent checks
-        hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
-        if (facing == 1) hitboxes[1].rect.x = pos.x;
-        else hitboxes[1].rect.x = pos.x - ridgidbox_width * 1.5f;
+        pos.x = startX + ResolvedX;
     }
 
-    // --- STEP 2: VERTICAL MOVEMENT ---
-    grounded = false;
-    pos.y += velocity.y * dt;
+    // ============================================================
+    //  VERTICAL SWEEP (same fix)
+    // ============================================================
 
-    hitboxes[0].rect.y = pos.y - ridgidbox_height;
-    hitboxes[1].rect.y = pos.y - ridgidbox_height;
+    if (YIntent == 0)
+    {
+        // Feet position
+        float feetX = pos.x;
+        float feetY = pos.y + 1; // 1 pixel below feet
 
-    vector<CollisionResult> yCollisions = Collision::CheckCollision(this);
-    for (auto& res : yCollisions) {
-        Hitbox* hbB = res.second;
-        if (hbB->type != RIDGIDBOX) continue;
+        if (IsSolid(feetX, feetY))
+            grounded = true;
+        else
+            grounded = false;
+    }
 
-        Rectangle overlap = GetCollisionRec(hitboxes[0].rect, hbB->rect);
 
-        // Check if we are landing (falling down)
-        if (velocity.y > 0) {
-            // Ensure we only snap to top if we were actually above the tile
-            if (hitboxes[0].rect.y + hitboxes[0].rect.height <= hbB->rect.y + overlap.height + skin + 1.0f) {
-                pos.y -= (overlap.height + skin);
-                grounded = true;
-                velocity.y = 0;
+    if (YIntent != 0)
+    {
+        int dir = (YIntent > 0) ? 1 : -1;
+        bool blocked = false;
+
+        for (int i = dir; i != YIntent + dir; i += dir)
+        {
+            float testY = startY + i;
+
+            // Sync hitbox to TEST POSITION
+            hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
+            hitboxes[0].rect.y = testY - ridgidbox_height;
+
+            auto results = Collision::CheckCollision(this);
+
+            for (auto& r : results)
+            {
+                if (r.second->type == RIDGIDBOX)
+                {
+                    blocked = true;
+                    break;
+                }
             }
-        }
-        // Check if we hit a ceiling (jumping up)
-        else if (velocity.y < 0) {
-            pos.y += (overlap.height + skin);
-            velocity.y = 0;
+
+            if (blocked)
+            {
+                if (dir > 0)
+                    grounded = true;
+
+                break;
+            }
+
+            ResolvedY = i;
         }
 
-        // Final Sync
-        hitboxes[0].rect.y = pos.y - ridgidbox_height;
-        hitboxes[1].rect.y = pos.y - ridgidbox_height;
+        pos.y = startY + ResolvedY;
     }
 }
 
 void Player::Draw() {
+    float drawX = floor(pos.x);
+    float drawY = floor(pos.y);
+
     Texture* tex = animator.GetTexture();
-    Rectangle src = {0, 0, facing * (float)tex->width, (float)tex->height};
-    Rectangle dest = {pos.x, pos.y, (float)tex->width, (float)tex->height};
-    Vector2 origin = {tex->width/2.0f, (float)tex->height};
+
+    Rectangle src = {
+        0,
+        0,
+        facing * (float)tex->width,
+        (float)tex->height
+    };
+
+    // Draw so feet are at pos.y and sprite is centered
+    Rectangle dest = {
+        drawX - tex->width / 2.0f,
+        drawY - tex->height,
+        (float)tex->width,
+        (float)tex->height
+    };
+
+    Vector2 origin = {0, 0};
 
     DrawTexturePro(*tex, src, dest, origin, 0, WHITE);
-
-    if (DEBUG_COLLISION) {
-        DrawRectangleLinesEx(hitboxes[0].rect, 1, GREEN);
-        DrawRectangleLinesEx(hitboxes[1].rect, 1, RED);
-    }
 }
+
 
 void Player::OnEvent(string &command) {
     if (GameCamera::usingFreeCam) {
