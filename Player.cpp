@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Engine/Chunks.h"
 
 Player::Player(Vector2 pos,
                DrawLayer& _entitylayer,
@@ -417,31 +418,25 @@ void Player::ResolveCollisions(double dt)
 }
 
 void Player::Draw() {
-    float drawX = floor(pos.x);
-    float drawY = floor(pos.y);
+    // Cast to int first to snap to the pixel grid, then back to float for the Draw call
+    float drawX = (float)((int)round(pos.x));
+    float drawY = (float)((int)round(pos.y));
 
     Texture* tex = animator.GetTexture();
+    if (!tex) return;
 
-    Rectangle src = {
-        0,
-        0,
-        facing * (float)tex->width,
-        (float)tex->height
-    };
+    float w = (float)tex->width;
+    float h = (float)tex->height;
 
-    // Draw so feet are at pos.y and sprite is centered
-    Rectangle dest = {
-        drawX - tex->width / 2.0f,
-        drawY - tex->height,
-        (float)tex->width,
-        (float)tex->height
-    };
+    // Source: If facing right (1), width is w. If left (-1), width is -w.
+    Rectangle src = { 0.0f, 0.0f, (float)facing * w, h };
 
-    Vector2 origin = {0, 0};
+    // Destination: Ensure width and height are EXACTLY the texture size
+    Rectangle dest = { drawX, drawY, w, h };
+    Vector2 origin = { 7, h }; //gotta use 7 since 7.5 messes it up
 
     DrawTexturePro(*tex, src, dest, origin, 0, WHITE);
 }
-
 
 void Player::OnEvent(string &command) {
     if (GameCamera::usingFreeCam) {

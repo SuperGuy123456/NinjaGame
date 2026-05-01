@@ -3,6 +3,7 @@
 //
 
 #include "SoundSystem.h"
+#include "raymath.h"
 
 map<string, SoundSource> SoundSystem::sources;
 map<float, Sound> SoundSystem::bgsounds;

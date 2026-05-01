@@ -6,12 +6,12 @@
 #include "Engine/EventManager.h"
 #include "BaseClasses/Base.h"
 #include "Engine/Spritesplitter.h"
-#include "Engine/Chunks.h"
 #include "Engine/Animation.h"
 #include "Engine/Collision.h"
 #include "screenres.h"
 
 using namespace std;
+class ChunkManager;
 class ChunkManager;
 
 class Player : public Load, public Listener, public HasCollider
