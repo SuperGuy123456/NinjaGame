@@ -102,6 +102,12 @@ void Chunk::Draw() {
             }
             localY++;
         }
+        DrawRectangleLines(
+        x * TILESIZE * PIXELSCALE * TILESPERCHUNK,
+        y * TILESIZE * PIXELSCALE * TILESPERCHUNK,
+        TILESPERCHUNK * TILESIZE * PIXELSCALE,
+        TILESPERCHUNK * TILESIZE * PIXELSCALE,
+        RED);
     }
     else {
         for (Grass* grassobj : grassobjs) {

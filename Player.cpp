@@ -196,7 +196,8 @@ Player::~Player() {
 }
 
 bool Player::IsSolid(float wx, float wy) {
-    return chunkmanager->CheckTileCollision({wx, wy}) != 0;
+    int id = chunkmanager->CheckTileCollision({wx, wy});
+    return (id != 0 && id != 3);
 }
 
 void Player::Update(double& dt) {
@@ -341,11 +342,11 @@ void Player::ResolveCollisions(double dt)
             hitboxes[0].rect.x = testX - ridgidbox_width / 2.0f;
             hitboxes[0].rect.y = startY - ridgidbox_height;
 
-            auto results = Collision::CheckCollision(this);
+            auto results = Collision::CheckCollision(&hitboxes[0]);
 
             for (auto& r : results)
             {
-                if (r.second->type == RIDGIDBOX)
+                if (r.second->type == RIDGIDBOX and r.second->name != "LEGS")
                 {
                     blocked = true;
                     break;
@@ -391,11 +392,11 @@ void Player::ResolveCollisions(double dt)
             hitboxes[0].rect.x = pos.x - ridgidbox_width / 2.0f;
             hitboxes[0].rect.y = testY - ridgidbox_height;
 
-            auto results = Collision::CheckCollision(this);
+            auto results = Collision::CheckCollision(&hitboxes[0]);
 
             for (auto& r : results)
             {
-                if (r.second->type == RIDGIDBOX)
+                if (r.second->type == RIDGIDBOX and r.second->name != "LEGS")
                 {
                     blocked = true;
                     break;
@@ -415,6 +416,17 @@ void Player::ResolveCollisions(double dt)
 
         pos.y = startY + ResolvedY;
     }
+    Hitbox& body = hitboxes[0];
+    Hitbox& atk  = hitboxes[1];
+
+    if (facing == 1) {
+        atk.rect.x = body.rect.x + body.rect.width; // right side
+    } else {
+        atk.rect.x = body.rect.x - atk.rect.width;  // left side
+    }
+
+    atk.rect.y = body.rect.y ; // adjust vertically
+
 }
 
 void Player::Draw() {
@@ -436,6 +448,11 @@ void Player::Draw() {
     Vector2 origin = { 7, h }; //gotta use 7 since 7.5 messes it up
 
     DrawTexturePro(*tex, src, dest, origin, 0, WHITE);
+
+    if (DEBUG_COLLISION) {
+        DrawRectangle(hitboxes[0].rect.x,hitboxes[0].rect.y,hitboxes[0].rect.width,hitboxes[0].rect.height, RED);
+        DrawRectangle(hitboxes[1].rect.x,hitboxes[1].rect.y,hitboxes[1].rect.width,hitboxes[1].rect.height, GREEN);
+    }
 }
 
 void Player::OnEvent(string &command) {

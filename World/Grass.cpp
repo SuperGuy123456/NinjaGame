@@ -34,20 +34,43 @@ void Grass::Update() {
     float dt = GetFrameTime();
 
     for (auto& blade : blades) {
-        float dist = playerpos.x - blade.base.x;
+
+        // Distance from player to this blade
+        float dx = playerpos.x - blade.base.x;
+        float dy = playerpos.y - blade.base.y;
+
+        // Reaction thresholds
+        const float reactX = 5.0f;   // horizontal range
+        const float reactY = 20.0f;  // vertical range
+
         float targetXOffset = 0.0f;
 
-        if (fabs(dist) < 5.0f) {
-            float force = 0.8f - (fabs(dist) / 5.0f);
-            targetXOffset = (dist > 0 ? -1.0f : 1.0f) * force * 10.0f;
+        // Only react if player is close in BOTH X and Y
+        if (fabs(dx) < reactX && fabs(dy) < reactY) {
+
+            // Horizontal force based on closeness
+            float force = 0.8f - (fabs(dx) / reactX);
+            force = fmaxf(force, 0.0f);
+
+            // Bend away from player
+            targetXOffset = (dx > 0 ? -1.0f : 1.0f) * force * 10.0f;
         }
 
+        // Target tip X position
         float targetX = blade.base.x + targetXOffset;
+
+        // Smoothly move tip horizontally
         blade.tip.x = Lerp(blade.tip.x, targetX, dt * 10.0f);
 
-        // Squish factor
-        float dx = blade.tip.x - blade.base.x;
-        float squish = (dx * dx) / 50.0f;
-        blade.tip.y = Lerp(blade.tip.y, (blade.base.y - max_height) + squish, dt * 10.0f);
+        // Squish factor (vertical bend)
+        float bend = blade.tip.x - blade.base.x;
+        float squish = (bend * bend) / 50.0f;
+
+        // Smoothly move tip vertically
+        blade.tip.y = Lerp(
+            blade.tip.y,
+            (blade.base.y - max_height) + squish,
+            dt * 10.0f
+        );
     }
 }

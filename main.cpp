@@ -133,7 +133,7 @@ int main() {
 
     // ---------------- Player ----------------
     std::cout << "[BOOT] Creating player...\n";
-    Player player(Vector2{50,0}, entitylayer, keyboardmanager, playerposmanager, &chunkmanager);
+    Player player(Vector2{50,20}, entitylayer, keyboardmanager, playerposmanager, &chunkmanager);
     ReferencePool::Add("PLAYER REF", &player);
 
     std::cout << "[BOOT] ChunkManager constructed successfully.\n";
